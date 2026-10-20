@@ -1,0 +1,153 @@
+# Validation record
+
+Date: 2026-10-21, Asia/Shanghai. These are local observations, not remote CI or
+registry-publication results. Raw process logs and metrics are in .local/evidence.
+
+## Environment and initial state
+
+- Working directory: D:/GitHub/MoonStatsD (same Windows directory as moonstatsd).
+  Initially empty, no Git repository or pre-existing applicable AGENTS.md. `moon new`
+  initialized an independent repository and generated AGENTS.md, subsequently read.
+- moon 0.1.20261020 (2284bd2); moonc v0.10.16+b1a0e846e.
+- Git 2.53.0.windows.3; Node v22.22.1; Go go1.23.2 windows/amd64.
+- PATH Go was absent; differential testing used the existing read-only executable
+  D:/GitHub/moonfcgi/.local/work/go/bin/go.exe through GO_EXE. All new Go caches and
+  module downloads were redirected into this project's .local. No MoonFCGI files
+  were modified and no SDK credentials were copied.
+- Sandboxed moon current-directory resolution and Git index creation returned
+  access-denied errors. Authorized elevated local runs succeeded. Initial template
+  check/build succeeded with 0 tests; it is not counted as functional validation.
+
+## Core and lifecycle
+
+Final functional test commands and actual output:
+
+```
+moon test --target native --deny-warn
+Total tests: 15, passed: 15, failed: 0.
+
+moon test --target wasm-gc --package Ryan-1125/moonstatsd --deny-warn
+Total tests: 6, passed: 6, failed: 0.
+```
+
+Coverage includes fixed wire vectors for six types; explicit negative absolute
+gauge rejection; signed zero; deterministic sampling; protocol-mode and DogStatsD
+name restrictions; duplicate tag keys; field injection; UTF-8 and exact packet
+boundaries; batch budget; actual local UDP data and packet boundaries; queue full;
+idle periodic send; concurrent producers and flush/close/repeat close; callback
+failure; scope cancellation; flush waiter cancellation; close waiter cancellation;
+actual already-closed socket send error accounting.
+
+Two internal deterministic timeout checks use an unstarted owner, so the state
+cannot progress before its deadline. Those checks validate waiting/state logic,
+not an induced network stall. Real socket tests and collector tests are separate;
+no mock is substituted for UDP acceptance. No claim of exhaustive schedule or
+network-fault coverage is made.
+
+## Actual collectors
+
+```
+./tools/install-collectors.ps1
+Fixed collectors downloaded and SHA256 verified (no npm install needed).
+
+node tools/test-interop.mjs
+submitted=9 send_errors=0 dropped=0 closed=true
+statsd_exporter v0.28.0: 12 collector assertions passed
+submitted=7 errors=0
+StatsD v0.9.0: sampled counter=4, gauge=7, timer=250ms, unique set=2
+```
+
+Exporter revision: c0a390a2c43f77863278615b47d46e886bdca726, windows/amd64,
+Go 1.23.2. Arguments: --web.listen-address=127.0.0.1:19102,
+--statsd.listen-udp=127.0.0.1:19125, --statsd.listen-tcp= (disabled).
+Actual GET /metrics excerpts:
+
+```
+moon_requests{env="test",route="home",service="demo",status="200"} 2
+moon_queue{env="test",service="demo"} 7
+moon_active{env="test",service="demo"} 2
+moon_latency_sum{env="test",route="home",service="demo"} 0.25
+moon_latency_count{env="test",route="home",service="demo"} 1
+moon_jobs{env="test",result="success",service="demo"} 1
+moon_job_time_sum{env="test",service="demo"} 1.5
+moon_payload_sum{env="test",service="demo"} 42
+moon_payload_count{env="test",service="demo"} 1
+moon_distribution_sum{env="test",service="demo"} 5
+moon_distribution_count{env="test",service="demo"} 1
+statsd_exporter_lines_total 9
+```
+
+The final DogStatsD example uses nonnegative absolute queue snapshots (10 then 7),
+not deltas. The independent official StatsD 0.9.0 process receives seven basic
+StatsD messages. Its real aggregate output contains:
+
+```
+"plain.count": 4
+"plain.queue": 7
+"plain.time": [250]
+"plain.unique": ["alice", "bob"]
+```
+
+Counter input=2, rate=0.5, injected draw=0.1; receiver rescales to 4. Gauge inputs
+10 then delta -3; Set inputs alice, alice, bob. Official receiver performs parsing,
+sampling correction, arithmetic, storage and uniqueness. The custom backend only
+serializes aggregate output. Config binds UDP 19126 and management TCP 19127 to
+127.0.0.1, flush interval 1000ms, with no Graphite/Datadog account or remote sink.
+Processes started by the tests are stopped in finally blocks. Local tests
+observe collector receipt; public flush still cannot acknowledge UDP delivery.
+
+## Reference client
+
+```
+$env:GO_EXE='D:/GitHub/moonfcgi/.local/work/go/bin/go.exe'
+$env:GOPROXY='https://goproxy.cn'
+node tools/test-reference.mjs
+
+datadog-go v5.8.3: 6 wire cases semantically equal (timer decimal formatting normalized)
+```
+
+The first default proxy download timed out; a process-local mirror retry completed
+with module checksum validation. Common cases cover c/g/ms/s/h/d, prefix and fixed
+plus per-call tags at rate=1. The real reference client's aggregation, telemetry
+and origin detection are disabled; its writer captures actual formatted payloads.
+Timer emits 12.500000 in Go and 12.5 in MoonBit, compared numerically. No performance
+or full compatibility conclusion is drawn from these six cases.
+
+## Package and independent consumer
+
+```
+./tools/test-consumer.ps1
+Independent published-ZIP consumer: codec and real UDP passed
+```
+
+The script builds the local Moon ZIP, extracts it into a fresh .local/consumer-GUID
+workspace, creates a separate application, updates dependencies, compiles, checks
+a fixed codec vector, sends a real metric and asserts receiver bytes. The workspace
+links the extracted library, never the working-tree library. First successful
+consumer: consumer-5acf0cc4bb614c98bbe8f0f046e3797b. This is local ZIP consumption,
+not a registry install test.
+
+```
+./tools/audit-package.ps1
+Actual ZIP audit passed: 35 entries, no private/build artifacts.
+```
+
+Final independent consumer: consumer-7f8fed28f16b485a8b9367051619f735.
+The final audit read 35 entries directly from the actual ZIP. `.local`, logs, credentials, SDKs, build
+outputs, Git metadata and downloaded third-party artifacts are excluded. The
+missing repository field produces a packaging warning, deliberately retained
+rather than inventing a remote URL.
+
+## Explicitly unverified
+
+- Remote GitHub Actions runs (workflow delivered only), Linux execution and
+  non-amd64 platforms; no throughput benchmark.
+- Commercial Datadog Agent end-to-end behavior; only shared wire and the actual
+  receivers above are validated. Negative absolute gauge and DogStatsD relative
+  gauge are deliberately unsupported.
+- Registry publication/new-install consumption and hackathon submission/review.
+- Exhaustive competing-package audit: related package review and its OTEL old
+  dependency-format limitation are documented in SOURCES.md.
+
+No remote repository creation, push, package publication or registration submission
+was performed.

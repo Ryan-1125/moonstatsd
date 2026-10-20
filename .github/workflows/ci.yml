@@ -1,0 +1,71 @@
+name: Verify
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - name: Install MoonBit on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://cli.moonbitlang.com/install/powershell.ps1 -OutFile $env:RUNNER_TEMP/moon-install.ps1
+          & $env:RUNNER_TEMP/moon-install.ps1
+          "$HOME/.moon/bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Install MoonBit on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Format, interface, build and tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          moon version --all
+          moon update
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          moon fmt --check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          moon info --target native
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if (git status --porcelain -- '*.mbti') { throw 'Generated interfaces changed' }
+          moon check --target native --deny-warn
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          moon build --target native --deny-warn
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          moon test --target native --deny-warn
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          moon test --target wasm-gc --package Ryan-1125/moonstatsd --deny-warn
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Fixed real collectors
+        shell: pwsh
+        run: |
+          ./tools/install-collectors.ps1
+          node tools/test-interop.mjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Reference client differential
+        run: node tools/test-reference.mjs
+      - name: Independent ZIP consumer and package audit
+        shell: pwsh
+        run: |
+          ./tools/test-consumer.ps1
+          ./tools/audit-package.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-${{ matrix.os }}
+          path: .local/evidence
