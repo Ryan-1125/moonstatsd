@@ -17,7 +17,7 @@ MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当�
 | 概率采样 | Counter、Timer | 再加 Histogram、Distribution | 确定随机源测试；StatsD 采样放大 |
 
 不实现 events、service checks、客户端聚合、重试、可靠交付、TCP、Unix socket、TLS 或来源识别。
-已实测 **Windows amd64 native**，并已获得 Ubuntu native 全流程 CI 结果；纯核心另在 wasm-gc 通过测试。诊断改进提交 39db0b3 的 Windows CI 已通过，同提交 Ubuntu 任务仍在排队；精确提交和结果见验证记录。Datadog Agent 本身未运行，支持声明限于以上协议与接收器范围。
+已实测 **Windows amd64 native**，并已获得 Ubuntu native 全流程 CI 结果；纯核心另在 wasm-gc 通过测试。诊断改进提交 39db0b3 及后续文档提交 accf41c 的 Windows、Ubuntu CI 均已全流程通过；精确提交和结果见验证记录。Datadog Agent 本身未运行，支持声明限于以上协议与接收器范围。
 
 ## 使用
 

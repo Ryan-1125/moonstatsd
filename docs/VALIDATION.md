@@ -208,3 +208,9 @@ The user subsequently selected public visibility. Repository visibility was chan
 to public and anonymous GitHub API access to Ryan-1125/moonstatsd was verified.
 The earlier private-creation statements above describe the historical upload.
 
+### CI completion update
+
+Runs 39462963061 (39db0b3) and 39463913880 (accf41c) subsequently
+completed successfully. Both Windows and Ubuntu jobs passed; the queued statuses
+above are historical observations, not current failures.
+https://github.com/Ryan-1125/moonstatsd/actions/runs/39463913880
