@@ -8,8 +8,8 @@ Registry index refreshed successfully with `moon add moonbitlang/async@0.20.0`.
 `rg -i -l 'statsd|dogstatsd' C:/Users/Lenovo/.moon/registry/index` returned no matches.
 Broader metrics/telemetry/monitoring search returned related observability, Prometheus,
 OpenTelemetry and unrelated font metrics packages. This is a limited index search,
-not evidence that the ecosystem has no competing library. Related API review remains
-open; no claim of unique ecosystem coverage is made.
+not evidence that the ecosystem has no competing library. Related API review is
+recorded below; no claim of unique ecosystem coverage is made.
 
 Fixed sources read before implementation:
 - statsd/statsd v0.9.0 docs/metric_types.md and LICENSE (MIT).
@@ -41,3 +41,49 @@ No TCP-to-UDP interface inference is used.
 Default datagram limit 512 follows the conservative Internet guidance in fixed
 StatsD metric_types.md; no setting can guarantee path MTU or delivery. Configurable
 up to IPv4 UDP payload ceiling 65507; operators must choose receiver/network limits.
+
+## Final audit additions (2026-10-21)
+
+Official DogStatsD protocol documentation was read at fixed DataDog/documentation
+commit `41384078b8ba37e2cd12e825584ffa8cd66703f7`,
+`content/en/developers/dogstatsd/datagram_shell.md` (BSD-3-Clause documentation
+license). The old URL had moved; the GitHub rename commit was inspected and its
+parent selected, rather than treating a failed fetch as having read the document.
+https://github.com/DataDog/documentation/blob/41384078b8ba37e2cd12e825584ffa8cd66703f7/content/en/developers/dogstatsd/datagram_shell.md
+This audit tightened DogStatsD names to ASCII alphanumerics/underscore/period.
+Relative gauge updates were restricted to StatsD mode: exporter behavior alone is
+not proof of Datadog Agent relative gauge semantics. DogStatsD example now uses
+absolute nonnegative snapshots; the separate actual StatsD test covers deltas.
+Zero rate, negative absolute gauge, and unsupported protocol extensions remain
+explicitly rejected subsets of the wider protocol.
+
+Related package review in an isolated .local/research module:
+- guiqi695/moon-prometheus-sdk@0.1.0: inspected generated root/metric/http APIs.
+  Counter/Gauge registry plus encode_registry/handle_metrics expose Prometheus /
+  OpenMetrics text, not this project's StatsD wire and UDP lifecycle.
+- 668xin/moonbit-observe@0.1.0: inspected README and src/lib public definitions.
+  Stopwatch, AsyncTimer, snapshots, console/JSON reporting are locally useful
+  timer/observation components; no full StatsD/DogStatsD UDP client was found in
+  these reviewed surfaces. No implementation from either package was copied.
+- ryota0624/moonbit_otel@0.1.0: index describes OTEL with protobuf and async
+  dependencies. Download resolution failed on its mizchi/x@0.1.3 old moon.mod.json
+  format, so this package's implementation was not fully audited. Product
+  dependencies were not altered to bypass this research limitation.
+The first two reviews support a distinct protocol-client scope; they do not prove
+absence of all competitors. Broad index terms used: statsd, dogstatsd, metrics,
+telemetry, monitoring; web exact StatsD/DogStatsD Mooncakes searches returned no
+results during this session. Index and web coverage are incomplete by nature.
+
+statsd_exporter v0.28.0 README and Apache-2.0 LICENSE were read, and official
+Windows amd64 ZIP SHA256 was matched against the release checksum file:
+`2270601d87b78200e485731755c3d99f0aa7c68da92801e56bbfe031ad81e257`.
+The actual receiver binary reports revision c0a390a2c43f77863278615b47d46e886bdca726.
+StatsD v0.9.0 source archive SHA256:
+`e30a298c5a3d99bf5dc6a2ff69aadcd4df188b5eae2deb4dfb391f3e183517ff`.
+Download installer preserves both upstream license files locally. No binaries or
+third-party source archives are included in the Moon package.
+
+Actual datadog-go v5.8.3 differential was subsequently run (Go 1.23.2). Six common
+wire cases agree after numeric normalization of Timer 12.500000 vs 12.5. The first
+proxy.golang.org download timed out; a process-local GOPROXY=https://goproxy.cn
+retry completed with Go checksum validation. No global Go settings were changed.

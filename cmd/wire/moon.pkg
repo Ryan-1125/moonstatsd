@@ -1,0 +1,6 @@
+import {
+  "Ryan-1125/moonstatsd" @codec,
+  "moonbitlang/core/encoding/utf8",
+}
+
+pkgtype(kind: "executable")

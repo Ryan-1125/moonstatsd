@@ -15,9 +15,9 @@ async fn main {
       ignore(c.record("jobs", Counter(1.0), tags=["result:success"]))
       ignore(c.record("job_time", Timer(1500.0)))
       ignore(c.flush())
-      // Worker snapshot and explicit gauge delta.
+      // Worker snapshots; relative gauge updates use StatsD mode (cmd/statsd).
       ignore(c.record("queue", Gauge(10.0)))
-      ignore(c.record("queue", GaugeDelta(-3.0)))
+      ignore(c.record("queue", Gauge(7.0)))
       ignore(c.record("active", Gauge(2.0)))
       ignore(c.record("payload", Histogram(42.0)))
       ignore(c.record("distribution", Distribution(5.0)))

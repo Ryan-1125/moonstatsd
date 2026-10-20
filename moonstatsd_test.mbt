@@ -139,3 +139,75 @@ test "deterministic sampling threshold" {
     },
   )
 }
+
+///|
+test "signed zero delta and tag byte budgets" {
+  assert_eq(@moonstatsd.encode("q", GaugeDelta(-0.0)).bytes(), b"q:+0|g")
+  assert_eq(@moonstatsd.encode("q", Gauge(-0.0)).bytes(), b"q:0|g")
+  assert_true(
+    try {
+      ignore(
+        @moonstatsd.encode(
+          "x",
+          Counter(1.0),
+          mode=DogStatsD,
+          tags=["中文", "中文"],
+          max_bytes=10,
+        ),
+      )
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(@moonstatsd.encode("x", Counter(1.0), prefix="bad\r"))
+      false
+    } catch {
+      _ => true
+    },
+  )
+}
+
+///|
+test "DogStatsD naming policy and relative gauge restriction" {
+  assert_true(
+    try {
+      ignore(@moonstatsd.encode("中文", Counter(1.0), mode=DogStatsD))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(@moonstatsd.encode("a-b", Counter(1.0), mode=DogStatsD))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(
+        @moonstatsd.encode("x", Counter(1.0), mode=DogStatsD, prefix="bad-"),
+      )
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(@moonstatsd.encode("x", GaugeDelta(-1.0), mode=DogStatsD))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_eq(
+    @moonstatsd.encode("valid_1.a", Gauge(7.0), mode=DogStatsD).bytes(),
+    b"valid_1.a:7|g",
+  )
+}

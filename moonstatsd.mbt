@@ -91,16 +91,30 @@ pub fn encode(
   }
   field(name, ":|,@# ")
   field(prefix, ":|,@# ", empty=true)
+  if mode == DogStatsD {
+    for c in prefix + name {
+      let code = c.to_int()
+      if !((code >= 65 && code <= 90) ||
+        (code >= 97 && code <= 122) ||
+        (code >= 48 && code <= 57) ||
+        c == '_' ||
+        c == '.') {
+        raise Invalid(
+          "DogStatsD metric names require ASCII alphanumerics, underscore or period",
+        )
+      }
+    }
+  }
   finite(rate)
   if rate <= 0 || rate > 1 {
     raise Invalid("rate must be in (0,1]")
   }
   let (value, kind) = match metric {
     Set(s) => {
-      field(s, ":|")
       if s.length() > max_bytes {
         raise TooLarge(s.length(), max_bytes)
       }
+      field(s, ":|")
       (s, "s")
     }
     Counter(v) => {
@@ -117,8 +131,20 @@ pub fn encode(
       (if v == 0 { "0" } else { v.to_string() }, "g")
     }
     GaugeDelta(v) => {
+      if mode == DogStatsD {
+        raise Invalid("gauge delta is only supported in StatsD mode")
+      }
       finite(v)
-      (if v >= 0 { "+" + v.to_string() } else { v.to_string() }, "g")
+      (
+        if v == 0 {
+          "+0"
+        } else if v > 0 {
+          "+" + v.to_string()
+        } else {
+          v.to_string()
+        },
+        "g",
+      )
     }
     Timer(v) => {
       finite(v)
