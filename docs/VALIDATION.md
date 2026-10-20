@@ -1,7 +1,8 @@
 # Validation record
 
-Date: 2026-10-21, Asia/Shanghai. These are local observations, not remote CI or
-registry-publication results. Raw process logs and metrics are in .local/evidence.
+Date: 2026-10-21, Asia/Shanghai. Initial observations are local; subsequent GitHub observations are recorded in
+the follow-up section. No registry publication occurred. Raw logs and metrics are
+in .local/evidence.
 
 ## Environment and initial state
 
@@ -138,7 +139,7 @@ outputs, Git metadata and downloaded third-party artifacts are excluded. The
 missing repository field produces a packaging warning, deliberately retained
 rather than inventing a remote URL.
 
-## Explicitly unverified
+## Initially unverified (superseded where noted below)
 
 - Remote GitHub Actions runs (workflow delivered only), Linux execution and
   non-amd64 platforms; no throughput benchmark.
@@ -149,8 +150,9 @@ rather than inventing a remote URL.
 - Exhaustive competing-package audit: related package review and its OTEL old
   dependency-format limitation are documented in SOURCES.md.
 
-No remote repository creation, push, package publication or registration submission
-was performed.
+At the initial handoff no remote repository creation, push, package publication
+or registration submission had been performed. Subsequent GitHub authorization
+and upload are recorded below. No Mooncakes publication or registration occurred.
 
 ## Follow-up: GitHub and diagnostic hardening (2026-10-21)
 
@@ -168,3 +170,34 @@ opening a socket, and preserves the latest local send error in Stats.last_send_e
 An actual closed-socket test checks that an error message is retained. Invalid
 capacity/datagram/interval/timeout/wire-budget inputs are tested to reject without
 entering the callback. Local native result: 16 passed, 0 failed.
+
+### Confirmed follow-up evidence
+
+Repository: https://github.com/Ryan-1125/moonstatsd (private; no visibility answer
+was received, so upload used the conservative private default).
+
+| Platform / snapshot | Actual result | Evidence |
+|---|---|---|
+| Ubuntu, 280bf37 | All workflow steps passed; native 15/15, wasm-gc 6/6 | run 39462578339, job 118765568834 |
+| Windows, 39db0b3 | All workflow steps passed; native 16/16, wasm-gc 6/6 | run 39462963061, job 118766868244 |
+| Ubuntu, 39db0b3 | Still queued at last observation | run 39462963061, job 118766868611 |
+
+Run links:
+- https://github.com/Ryan-1125/moonstatsd/actions/runs/39462578339
+- https://github.com/Ryan-1125/moonstatsd/actions/runs/39462963061
+
+Both successful jobs actually ran the two fixed collectors, six-case reference
+comparison, independent ZIP consumer and 35-entry ZIP audit. This is not a claim
+that the queued Ubuntu job has passed. CI SDK for these runs: moon 0.1.20261016,
+moonc v0.10.16+b1a0e846e. Logs retained locally as
+.local/evidence/ci-ubuntu-280bf37.log and ci-windows-39db0b3.log.
+
+With .gitattributes enforcing LF, a fresh local clone explicitly using
+core.autocrlf=true had zero CR bytes in client/client.mbt and passed the same
+0.1.20261016 CLI format check. The next remote Windows run passed all steps.
+This records the observed correction without inferring a broader upstream cause.
+
+The improved client's independent local ZIP consumer also passed at
+consumer-0fdceb72f14d4f719938c7da90582b20; final package audit still found 35
+entries without private/build artifacts. Normal VS Code was launched with
+`code --new-window D:/GitHub/MoonStatsD`; no isolated profile or global SDK switch.
