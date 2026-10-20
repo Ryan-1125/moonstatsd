@@ -14,7 +14,7 @@ pub async fn[T] with_client(@socket.Addr, async (Client) -> T, mode? : @moonstat
 pub(all) suberror ClientError {
   Closed
   QueueFull
-  InvalidConfig
+  InvalidConfig(String)
 } derive(@debug.Debug)
 pub fn ClientError::to_repr(Self) -> @debug.Repr
 
@@ -41,6 +41,7 @@ pub struct Stats {
   queue_full : Int64
   submitted : Int64
   send_errors : Int64
+  last_send_error : String?
   dropped : Int64
   pending : Int64
   closed : Bool

@@ -202,3 +202,42 @@ async test "cancelled close cancels sender and drops backlog" {
     interval_ms=10000,
   )
 }
+
+///|
+async test "invalid configuration never opens callback and explains rejection" {
+  let cases = [
+    (0, 512, 100, 1000),
+    (1, 0, 100, 1000),
+    (1, 512, 0, 1000),
+    (1, 512, 100, 0),
+    (65536, 512, 100, 1000),
+  ]
+  for (capacity, max_bytes, interval_ms, timeout_ms) in cases {
+    let mut entered = false
+    let rejected = try {
+      @client.with_client(
+        @socket.Addr::parse("127.0.0.1:8125"),
+        _ => entered = true,
+        capacity~,
+        max_bytes~,
+        interval_ms~,
+        timeout_ms~,
+      )
+      false
+    } catch {
+      @client.InvalidConfig(reason) => !reason.is_empty()
+      _ => false
+    }
+    assert_true(rejected)
+    assert_false(entered)
+  }
+  assert_true(
+    try {
+      @client.with_client(@socket.Addr::parse("127.0.0.1:0"), _ => ())
+      false
+    } catch {
+      @client.InvalidConfig(reason) => !reason.is_empty()
+      _ => false
+    },
+  )
+}

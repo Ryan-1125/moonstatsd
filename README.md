@@ -1,6 +1,6 @@
 # MoonStatsD
 
-MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当前为本地开发版 **0.1.0**，未发布到 Mooncakes，未创建远程仓库。
+MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当前为开发版 **0.1.0**，未发布到 Mooncakes。代码仓库：[Ryan-1125/moonstatsd](https://github.com/Ryan-1125/moonstatsd)（当前私有）。
 交接文档中的 API 是最初草案；实际公开接口以 `pkg.generated.mbti` 和 `client/pkg.generated.mbti` 为准。
 
 ## 支持范围
@@ -17,7 +17,7 @@ MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当�
 | 概率采样 | Counter、Timer | 再加 Histogram、Distribution | 确定随机源测试；StatsD 采样放大 |
 
 不实现 events、service checks、客户端聚合、重试、可靠交付、TCP、Unix socket、TLS 或来源识别。
-仅实测 **Windows amd64 native** 网络功能；纯核心另在 wasm-gc 通过测试。Linux CI 已配置但尚未远程运行，不能据此声称 Linux 已验证。Datadog Agent 本身未运行，支持声明限于以上协议与接收器范围。
+仅实测 **Windows amd64 native** 网络功能；纯核心另在 wasm-gc 通过测试。首轮 Ubuntu CI 已通过；Windows CI 的格式检查问题正在修复，具体运行见验证记录。Datadog Agent 本身未运行，支持声明限于以上协议与接收器范围。
 
 ## 使用
 
@@ -76,7 +76,7 @@ prefix 原样拼接，请自行包含末尾的 `.`。DogStatsD 的完整名称�
 
 close 的时限限制排空等待；取消之后的运行时资源清理可能延后完成。超时调用返回后可读取 stats，作用域退出保证清理完成。进程强制终止时无法保证排空。
 
-Stats 中 enqueued/submitted/dropped/pending 是指标数；sampled_out 是抽样排除数，queue_full 是满队列拒绝数，send_errors 是失败数据报次数。`submitted` 只表示 SDK 的本机 socket 发送调用返回成功。UDP 可能丢失、重复、乱序；取消期间的数据报也可能已经发出，不能把本地 dropped 当作“采集器绝未收到”。
+Stats 中 enqueued/submitted/dropped/pending 是指标数；sampled_out 是抽样排除数，queue_full 是满队列拒绝数，send_errors 是失败数据报次数；last_send_error 保留最近一次本机发送错误文本，成功发送不会清除它。InvalidConfig(reason) 提供具体配置原因，目的 UDP 端口 0 会在建 socket 前拒绝。`submitted` 只表示 SDK 的本机 socket 发送调用返回成功。UDP 可能丢失、重复、乱序；取消期间的数据报也可能已经发出，不能把本地 dropped 当作“采集器绝未收到”。
 
 ## 验证命令
 
@@ -101,6 +101,6 @@ Go 用于参考客户端差分；不属于库运行依赖。可通过 `GO_EXE` �
 
 `test-reference.mjs` 与 datadog-go v5.8.3 比较共同支持的六种 wire，按数值语义归一 Timer 小数位；不拿格式差异冒充协议错误。`test-consumer.ps1` 从实际 ZIP 解压独立副本建立独立应用，不依赖工作树源码覆盖发布内容。证据输出写入不提交、不打包的 `.local/evidence`；重要实测摘录见 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
-CI 覆盖格式、接口差异、check/build/test、真实 UDP、两个采集器、参考客户端和独立消费；目前只交付工作流文件，没有远程 CI 结果。安装脚本使用官方当前 SDK，并记录版本，后续升级需重新验证。未运行性能基准，不作吞吐或生态唯一性声明。
+CI 覆盖格式、接口差异、check/build/test、真实 UDP、两个采集器、参考客户端和独立消费；实际远程执行记录见 docs/VALIDATION.md。安装脚本使用官方当前 SDK，并记录版本，后续升级需重新验证。未运行性能基准，不作吞吐或生态唯一性声明。
 
 查重、固定协议资料和许可证见 [docs/SOURCES.md](docs/SOURCES.md) 与 [THIRD_PARTY.md](THIRD_PARTY.md)。项目使用 Apache-2.0。

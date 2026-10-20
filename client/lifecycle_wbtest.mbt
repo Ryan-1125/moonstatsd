@@ -22,6 +22,7 @@ fn idle_client() -> Client {
     queue_full: 0,
     submitted: 0,
     send_errors: 0,
+    last_send_error: None,
     dropped: 0,
   }
 }
@@ -41,6 +42,7 @@ async test "real closed socket error is accounted without retries" {
     let report = c.flush()
     assert_eq(report.submitted, 0L)
     assert_eq(report.send_errors, 1L)
+    assert_true(report.last_send_error is Some(text) && !text.is_empty())
     assert_eq(report.dropped, 1L)
     ignore(c.close())
   })

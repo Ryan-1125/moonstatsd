@@ -2,7 +2,7 @@
 pub(all) suberror ClientError {
   Closed
   QueueFull
-  InvalidConfig
+  InvalidConfig(String)
 } derive(Debug)
 
 ///|
@@ -28,6 +28,7 @@ pub struct Stats {
   queue_full : Int64
   submitted : Int64
   send_errors : Int64
+  last_send_error : String?
   dropped : Int64
   pending : Int64
   closed : Bool
@@ -59,6 +60,7 @@ pub struct Client {
   priv mut queue_full : Int64
   priv mut submitted : Int64
   priv mut send_errors : Int64
+  priv mut last_send_error : String?
   priv mut dropped : Int64
 }
 
@@ -70,6 +72,7 @@ pub fn Client::stats(self : Client) -> Stats {
     queue_full: self.queue_full,
     submitted: self.submitted,
     send_errors: self.send_errors,
+    last_send_error: self.last_send_error,
     dropped: self.dropped,
     pending: self.accepted - self.done,
     closed: self.state == 2,
@@ -123,7 +126,7 @@ pub async fn Client::flush(
   timeout_ms~ : Int32 = self.timeout_ms,
 ) -> Stats {
   if timeout_ms < 1 {
-    raise InvalidConfig
+    raise InvalidConfig("timeout_ms must be positive")
   }
   let target = self.accepted
   self.requested = true
@@ -144,7 +147,7 @@ pub async fn Client::close(
   timeout_ms~ : Int32 = self.timeout_ms,
 ) -> Stats {
   if timeout_ms < 1 {
-    raise InvalidConfig
+    raise InvalidConfig("timeout_ms must be positive")
   }
   if self.state == 0 {
     self.state = 1
@@ -195,6 +198,7 @@ async fn Client::send_loop(self : Client, socket : @socket.UdpClient) -> Unit {
             raise err
           }
           self.send_errors += 1
+          self.last_send_error = Some(err.to_string())
           self.dropped += count
         }
       }
@@ -226,14 +230,23 @@ pub async fn[T] with_client(
   timeout_ms~ : Int32 = 1000,
   random? : () -> Double,
 ) -> T {
-  if capacity < 1 ||
-    capacity > 65536 ||
-    max_bytes < 1 ||
-    max_bytes > 65507 ||
-    interval_ms < 1 ||
-    timeout_ms < 1 ||
-    capacity > 16777216 / max_bytes {
-    raise InvalidConfig
+  if capacity < 1 || capacity > 65536 {
+    raise InvalidConfig("capacity must be in 1..65536")
+  }
+  if max_bytes < 1 || max_bytes > 65507 {
+    raise InvalidConfig("max_bytes must be in 1..65507")
+  }
+  if interval_ms < 1 {
+    raise InvalidConfig("interval_ms must be positive")
+  }
+  if timeout_ms < 1 {
+    raise InvalidConfig("timeout_ms must be positive")
+  }
+  if capacity > 16777216 / max_bytes {
+    raise InvalidConfig("capacity times max_bytes exceeds 16MiB wire budget")
+  }
+  if addr.port() == 0 {
+    raise InvalidConfig("destination UDP port must be nonzero")
   }
   let tags = fixed_tags.copy()
   // Validate configuration even if callback emits no metrics.
@@ -250,7 +263,9 @@ pub async fn[T] with_client(
   let draw = match random {
     Some(f) => f
     None => {
-      let seed = @env.rand(32).unwrap_or_else(() => raise InvalidConfig)
+      let seed = @env.rand(32).unwrap_or_else(() => {
+        raise InvalidConfig("system entropy unavailable; supply random source")
+      })
       let rng = @random.Rand::chacha8(seed~)
       () => rng.double()
     }
@@ -278,6 +293,7 @@ pub async fn[T] with_client(
     queue_full: 0,
     submitted: 0,
     send_errors: 0,
+    last_send_error: None,
     dropped: 0,
   }
   @async.with_task_group(group => {

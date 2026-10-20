@@ -151,3 +151,20 @@ rather than inventing a remote URL.
 
 No remote repository creation, push, package publication or registration submission
 was performed.
+
+## Follow-up: GitHub and diagnostic hardening (2026-10-21)
+
+The user subsequently authorized GitHub creation and upload. Repository created as
+private at https://github.com/Ryan-1125/moonstatsd, with existing commits pushed.
+First actual run: https://github.com/Ryan-1125/moonstatsd/actions/runs/39462578339
+Ubuntu completed all steps successfully. Windows failed at `moon fmt --check`:
+Git could not open/hash the formatter's extended-path temporary outputs. Its
+installed CLI was 0.1.20261016. The same CLI passes locally on LF source files;
+we are adding repository LF attributes to eliminate checkout line-ending drift
+before rerunning. No successful Windows CI result is inferred from this change.
+
+Client follow-up adds InvalidConfig(reason), rejects destination port zero before
+opening a socket, and preserves the latest local send error in Stats.last_send_error.
+An actual closed-socket test checks that an error message is retained. Invalid
+capacity/datagram/interval/timeout/wire-budget inputs are tested to reject without
+entering the callback. Local native result: 16 passed, 0 failed.
