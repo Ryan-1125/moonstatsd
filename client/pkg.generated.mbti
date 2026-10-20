@@ -1,0 +1,52 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Ryan-1125/moonstatsd/client"
+
+import {
+  "Ryan-1125/moonstatsd",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn[T] with_client(@socket.Addr, async (Client) -> T, mode? : @moonstatsd.Mode, prefix? : String, fixed_tags? : Array[String], capacity? : Int32, max_bytes? : Int32, interval_ms? : Int32, timeout_ms? : Int32, random? : () -> Double) -> T
+
+// Errors
+pub(all) suberror ClientError {
+  Closed
+  QueueFull
+  InvalidConfig
+} derive(@debug.Debug)
+pub fn ClientError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) enum Admission {
+  Enqueued
+  SampledOut
+} derive(Eq, @debug.Debug)
+pub fn Admission::equal(Self, Self) -> Bool
+pub fn Admission::not_equal(Self, Self) -> Bool
+pub fn Admission::to_repr(Self) -> @debug.Repr
+
+pub struct Client {
+  // private fields
+}
+pub async fn Client::close(Self, timeout_ms? : Int32) -> Stats
+pub async fn Client::flush(Self, timeout_ms? : Int32) -> Stats
+pub fn Client::record(Self, String, @moonstatsd.Metric, tags? : Array[String], rate? : Double) -> Admission raise
+pub fn Client::stats(Self) -> Stats
+
+pub struct Stats {
+  enqueued : Int64
+  sampled_out : Int64
+  queue_full : Int64
+  submitted : Int64
+  send_errors : Int64
+  dropped : Int64
+  pending : Int64
+  closed : Bool
+} derive(@debug.Debug)
+pub fn Stats::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

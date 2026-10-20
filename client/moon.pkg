@@ -1,0 +1,10 @@
+import {
+  "Ryan-1125/moonstatsd" @codec,
+  "moonbitlang/async",
+  "moonbitlang/async/cond_var" @cond,
+  "moonbitlang/async/socket",
+  "moonbitlang/core/deque",
+  "moonbitlang/core/random",
+  "moonbitlang/core/env",
+  "moonbitlang/core/debug",
+}
