@@ -1,6 +1,6 @@
 # MoonStatsD
 
-MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当前为开发版 **0.1.0**，未发布到 Mooncakes。代码仓库：[Ryan-1125/moonstatsd](https://github.com/Ryan-1125/moonstatsd)（当前私有）。
+MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当前为开发版 **0.1.0**，未发布到 Mooncakes。代码仓库：[Ryan-1125/moonstatsd](https://github.com/Ryan-1125/moonstatsd)（公开）。
 交接文档中的 API 是最初草案；实际公开接口以 `pkg.generated.mbti` 和 `client/pkg.generated.mbti` 为准。
 
 ## 支持范围

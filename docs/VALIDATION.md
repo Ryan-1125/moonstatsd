@@ -201,3 +201,10 @@ The improved client's independent local ZIP consumer also passed at
 consumer-0fdceb72f14d4f719938c7da90582b20; final package audit still found 35
 entries without private/build artifacts. Normal VS Code was launched with
 `code --new-window D:/GitHub/MoonStatsD`; no isolated profile or global SDK switch.
+
+### Visibility update
+
+The user subsequently selected public visibility. Repository visibility was changed
+to public and anonymous GitHub API access to Ryan-1125/moonstatsd was verified.
+The earlier private-creation statements above describe the historical upload.
+
