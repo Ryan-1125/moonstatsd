@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Ryan-1125/moonstatsd"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn encode(String, Metric, mode? : Mode, prefix? : String, fixed_tags? : Array[String], tags? : Array[String], rate? : Double, max_bytes? : Int32) -> Message raise EncodeError
+
+pub fn pack(Array[Message], max_bytes? : Int32, max_total_bytes? : Int32) -> Array[Bytes] raise EncodeError
+
+pub fn sampled(Double, Double) -> Bool raise EncodeError
+
+// Errors
+pub(all) suberror EncodeError {
+  Invalid(String)
+  TooLarge(Int32, Int32)
+} derive(@debug.Debug)
+pub fn EncodeError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub struct Message {
+  // private fields
+}
+pub fn Message::bytes(Self) -> Bytes
+
+pub(all) enum Metric {
+  Counter(Double)
+  Gauge(Double)
+  GaugeDelta(Double)
+  Timer(Double)
+  Set(String)
+  Histogram(Double)
+  Distribution(Double)
+} derive(@debug.Debug)
+pub fn Metric::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Mode {
+  StatsD
+  DogStatsD
+} derive(Eq, @debug.Debug)
+pub fn Mode::equal(Self, Self) -> Bool
+pub fn Mode::not_equal(Self, Self) -> Bool
+pub fn Mode::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

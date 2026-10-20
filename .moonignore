@@ -1,0 +1,7 @@
+.local/
+_build/
+.mooncakes/
+.git/
+.githooks/
+.github/
+*.log
