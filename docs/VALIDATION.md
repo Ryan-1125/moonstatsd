@@ -214,3 +214,17 @@ Runs 39462963061 (39db0b3) and 39463913880 (accf41c) subsequently
 completed successfully. Both Windows and Ubuntu jobs passed; the queued statuses
 above are historical observations, not current failures.
 https://github.com/Ryan-1125/moonstatsd/actions/runs/39463913880
+
+## Continued production and caller-owned tag snapshots
+
+Three additional native real-UDP regression groups now verify that a flush
+barrier returns for its captured admissions while a later batch remains pending;
+that close racing an active producer rejects new admissions and drains accepted
+ones; and that mutations to fixed/call tag arrays cannot alter already captured
+configuration or wire messages. Each uses a real ephemeral loopback UDP socket.
+
+`moon test --target native --deny-warn`: Total tests: 19, passed: 19, failed: 0.
+These tests assert local submission/accounting and selected received bytes, not
+reliable delivery of every UDP datagram. Timeout-based schedule assumptions are
+avoided: task yields and a backlog larger than a single packet establish the
+competition under test.

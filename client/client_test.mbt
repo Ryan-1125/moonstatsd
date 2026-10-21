@@ -241,3 +241,116 @@ async test "invalid configuration never opens callback and explains rejection" {
     },
   )
 }
+
+///|
+async test "flush finishes its admission snapshot while later metrics remain pending" {
+  let receiver = @socket.UdpServer(@socket.Addr::parse("127.0.0.1:0"))
+  defer receiver.close()
+  @async.with_timeout(3000, () => {
+    @client.with_client(
+      receiver.addr,
+      c => {
+        for _ in 0..<100 {
+          ignore(c.record("a", Counter(1.0)))
+        }
+        @async.with_task_group(g => {
+          let barrier = g.spawn(() => c.flush())
+          @async.pause()
+          for _ in 0..<128 {
+            ignore(c.record("a", Counter(1.0)))
+          }
+          let snapshot = barrier.wait()
+          assert_eq(snapshot.enqueued, 228L)
+          assert_true(snapshot.submitted >= 100L)
+          assert_true(snapshot.pending > 0L)
+          assert_eq(snapshot.send_errors, 0L)
+        })
+        let closed_report = c.close()
+        assert_eq(closed_report.submitted, 228L)
+        assert_eq(closed_report.pending, 0L)
+        assert_eq(closed_report.dropped, 0L)
+        let buf = FixedArray::make(64, b'\x00')
+        let (n, _) = receiver.recvfrom(buf)
+        assert_eq(Bytes::from_array(buf[:n].to_owned()), b"a:1|c")
+      },
+      capacity=256,
+      max_bytes=5,
+      interval_ms=10000,
+    )
+  })
+}
+
+///|
+async test "close racing an active producer rejects new admissions and drains accepted ones" {
+  let receiver = @socket.UdpServer(@socket.Addr::parse("127.0.0.1:0"))
+  defer receiver.close()
+  @async.with_timeout(3000, () => {
+    @client.with_client(
+      receiver.addr,
+      c => {
+        for _ in 0..<100 {
+          ignore(c.record("a", Counter(1.0)))
+        }
+        let mut produced = 0
+        let mut rejected = false
+        @async.with_task_group(g => {
+          g.spawn_bg(() => {
+            while true {
+              try {
+                ignore(c.record("a", Counter(1.0)))
+                produced += 1
+              } catch {
+                @client.Closed => {
+                  rejected = true
+                  break
+                }
+                err => raise err
+              }
+              @async.pause()
+            }
+          })
+          g.spawn_bg(() => ignore(c.flush()))
+          @async.pause()
+          assert_true(produced > 0)
+          let report = c.close()
+          assert_true(report.closed)
+          assert_eq(report.submitted, report.enqueued)
+          assert_eq(report.pending, 0L)
+          assert_eq(report.dropped, 0L)
+        })
+        assert_true(rejected)
+        assert_eq(c.stats().enqueued, 100L + produced.to_int64())
+      },
+      capacity=256,
+      max_bytes=5,
+      interval_ms=10000,
+    )
+  })
+}
+
+///|
+async test "fixed and call tags are snapshotted before caller mutation" {
+  let receiver = @socket.UdpServer(@socket.Addr::parse("127.0.0.1:0"))
+  defer receiver.close()
+  let fixed = ["env:before"]
+  let tags = ["route:home"]
+  @async.with_timeout(3000, () => {
+    @client.with_client(
+      receiver.addr,
+      c => {
+        fixed[0] = "env:after"
+        ignore(c.record("request", Counter(1.0), tags~))
+        tags[0] = "route:changed"
+        ignore(c.flush())
+        let buf = FixedArray::make(128, b'\x00')
+        let (n, _) = receiver.recvfrom(buf)
+        assert_eq(
+          Bytes::from_array(buf[:n].to_owned()),
+          b"request:1|c|#env:before,route:home",
+        )
+      },
+      mode=DogStatsD,
+      fixed_tags=fixed,
+    )
+  })
+}
