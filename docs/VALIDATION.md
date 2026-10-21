@@ -316,3 +316,36 @@ written to files or logs. The operations helper itself remains ignored in .local
 STATUS.md was added after the 39-entry CI artifact above; the final local package
 contains 40 entries. No package registry publication or hackathon submission was
 performed in this round.
+
+## 2026-10-21：发布文档与 Mooncakes 消费验收
+
+发布依据：用户终端 `moon publish` 返回 `Server status: 200 OK`；本轮从 registry 解析 `Ryan-1125/moonstatsd@0.1.0`，不使用 path 依赖或 moon.work 源码覆盖。
+
+命令：`./tools/test-registry-consumer.ps1`。
+
+```text
+Registry index updated successfully
+Symbols updated successfully
+Registry 0.1.0 consumer: codec, packing and real DogStatsD UDP passed
+```
+
+独立应用断言纯核心编码、pack 结果，以及带固定和调用级标签的三条指标在真实 UDP 接收端的完整字节；同时检查 submitted=3、send_errors=0。源文件保留在 `.local/registry-consumer-*`，运行日志为 `.local/evidence/registry-consumer.log`。
+
+本轮首次运行因受限环境不能写 registry 更新锁而失败；允许写依赖缓存及联网后重跑成功。现有 native 测试在受限网络环境首次为 16/20（四项 UDP TimeoutError），允许本机 UDP 后同一代码重跑为：
+
+```text
+moon test --target native
+Total tests: 20, passed: 20, failed: 0.
+moon test --target wasm-gc --package Ryan-1125/moonstatsd
+Total tests: 6, passed: 6, failed: 0.
+```
+
+本次整理发布后的 README、使用约定、状态与版本记录；历史“未发布”描述保留在本文件早期记录中，仅反映当时状态。
+
+README 的两个 MoonBit 示例已原样提取至上述 registry 消费项目的独立包：最初纯核心示例缺少 `fn main raise`，编译检查发现后已修正。最终 `moon check --target native` 通过；纯核心示例运行断言通过；UDP 示例运行输出：
+
+```text
+local submitted=3, send errors=0
+```
+
+此 UDP 示例输出是本机发送结果；接收字节断言由前述 registry UDP 测试独立覆盖。README、使用约定和状态文档的本地链接检查，以及 `git diff --check` 均通过。`moon info --target native` 与 `moon fmt` 通过，公开 `.mbti` 接口无变化。

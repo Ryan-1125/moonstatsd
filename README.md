@@ -1,29 +1,32 @@
 # MoonStatsD
 
-MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当前为开发版 **0.1.0**，未发布到 Mooncakes。代码仓库：[Ryan-1125/moonstatsd](https://github.com/Ryan-1125/moonstatsd)（公开）。
-当前验证范围和未完成事项见 [当前状态](docs/STATUS.md)。
-交接文档中的 API 是最初草案；实际公开接口以 `pkg.generated.mbti` 和 `client/pkg.generated.mbti` 为准。
+[![Verify](https://github.com/Ryan-1125/moonstatsd/actions/workflows/ci.yml/badge.svg)](https://github.com/Ryan-1125/moonstatsd/actions/workflows/ci.yml)
+[![Mooncakes](https://img.shields.io/badge/Mooncakes-0.1.0-blue)](https://mooncakes.io/docs/Ryan-1125/moonstatsd)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-## 支持范围
+**MoonBit 原生 StatsD / DogStatsD 协议核心与异步 UDP 指标上报客户端。**
 
-| 能力 | 基础 StatsD | DogStatsD | 已做的真实验证 |
-|---|---|---|---|
-| Counter / Timer（毫秒） | 是 | 是 | StatsD 0.9.0、statsd_exporter 0.28.0、官方 DogStatsD 7.60.0 |
-| 非负绝对 Gauge | 是 | 是 | 上述三个真实接收器验证最终值 |
-| GaugeDelta | 是 | 拒绝 | StatsD 0.9.0：10 加 -3 得到 7 |
-| 负绝对 Gauge | 明确报错 | 明确报错 | 不把它误作负增量 |
-| Set | 是 | 是 | StatsD 0.9.0 / 官方 DogStatsD 7.60.0 去重；wire 差分 |
-| Histogram / Distribution | 拒绝 | 是 | h：exporter 与官方 DogStatsD；d：exporter 与 wire 差分 |
-| namespace、固定及调用级标签 | namespace；拒绝标签 | 是 | 采集器标签和参考客户端 wire |
-| 概率采样 | Counter、Timer | 再加 Histogram、Distribution | 确定随机源测试；StatsD 采样放大 |
+为 Web 服务、后台任务和工作进程上报请求数量、响应耗时、任务结果及队列状态。MoonStatsD 提供类型化指标、概率采样、标签校验、按字节打包，以及具有明确资源和生命周期边界的异步客户端，可接入已有 StatsD、DogStatsD 和 Prometheus statsd_exporter 采集链路。
 
-不实现 events、service checks、客户端聚合、重试、可靠交付、TCP、Unix socket、TLS 或来源识别。
-已实测 **Windows amd64 native**，并已获得 Ubuntu native 全流程 CI 结果；纯核心另在 wasm-gc 通过测试。提交 a547b5b 的 Windows、Ubuntu CI 均全流程通过：native 20/20、核心 wasm-gc 6/6。官方 standalone DogStatsD Agent 7.60.0 已在 Ubuntu Docker 中完成真实联调；Distribution sketches 和商业 Datadog 后端不在这项验证范围内。
+## 安装
 
-## 使用
+```sh
+moon add Ryan-1125/moonstatsd
+```
 
-模块当前从本地工作区或打包 ZIP 引用，不能把尚未发布的版本当作可用的 registry 依赖。`tools/test-consumer.ps1` 展示完整独立消费方式。
-库项目依赖固定为 `moonbitlang/async@0.20.0`，native 目标。应用的 `moon.pkg` 导入：
+当前发布版本为 **0.1.0**，使用 Apache-2.0 许可证。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.20.0`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
+
+[Mooncakes 包与文档](https://mooncakes.io/docs/Ryan-1125/moonstatsd) · [版本记录](CHANGELOG.md) · [验证结果](docs/STATUS.md)
+
+## 快速开始
+
+应用直接使用异步运行时时，显式添加依赖：
+
+```sh
+moon add moonbitlang/async@0.20.0
+```
+
+在可执行包的 `moon.pkg` 中导入：
 
 ```moonbit
 import {
@@ -34,80 +37,132 @@ import {
 pkgtype(kind: "executable")
 ```
 
+向本机 `8125` 端口的 DogStatsD 采集器发送指标：
+
 ```moonbit
+///|
 async fn main {
   let address = @socket.Addr::parse("127.0.0.1:8125")
   @client.with_client(address, client => {
     ignore(client.record("requests", Counter(1.0), tags=["route:home"]))
     ignore(client.record("latency", Timer(12.5))) // 毫秒
-    ignore(client.record("queue", Gauge(10.0)))
     ignore(client.record("queue", Gauge(7.0)))
     let report = client.flush()
     println("local submitted=\{report.submitted}, send errors=\{report.send_errors}")
-    ignore(client.close())
   }, mode=DogStatsD, prefix="service.", fixed_tags=["env:dev"])
 }
 ```
 
-`record(name, Metric, tags~, rate~)` 同时处理所有指标类型，返回 `Enqueued` 或 `SampledOut`；未通过校验、关闭、队列满会抛错。无需商业账号的三场景示例在 `cmd/main`：请求完成、后台任务结束、工作进程 gauge 更新。避免高基数标签，例如用户 ID、完整 URL 和异常文本。
+```sh
+moon run . --target native
+```
 
-纯核心 `encode(...) -> Message` 只校验和编码采样声明，不执行随机抽样；`sampled(rate, draw)` 独立给出选择结果。客户端对可采样类型实际抽样，默认系统熵初始化 ChaCha8；熵不可用报错，可通过 `random=() => ...` 注入均匀 `[0,1)` 随机源。本库 rate 取 `(0,1]`，不编码零采样率；Gauge / Set 的 rate 必须为 1。无效输入即使原本会被抽样丢弃仍报错。
+`with_client` 在回调正常结束时自动关闭并排空缓冲。`record` 返回 `Enqueued` 或 `SampledOut`，非法输入、队列满和关闭后的写入会抛错。`flush` 返回本地累计统计，应用可检查 `send_errors` 和 `dropped`。UDP 无接收确认；本机发送成功不代表采集器已收到。
 
-数值为有限 IEEE-754 Double；不保证超过 2^53 的整数精度。使用 SDK 最短数值字符串（可能为科学计数法）；Timer 单位为毫秒。负绝对 gauge 报错，因为基础协议需要先清零再发负增量，网络丢包和其他生产者会破坏这种两步更新的含义。相对 gauge 仅提供给基础 StatsD 模式，不将接收器的扩展语义当作 DogStatsD 的通用承诺。负零 gauge 归一为零，负零 delta 编码为 `+0`。
+仓库中的 [`cmd/main`](cmd/main/main.mbt) 包含请求、后台任务和工作进程三种使用场景。
 
-prefix 原样拼接，请自行包含末尾的 `.`。DogStatsD 的完整名称只允许 ASCII 字母、数字、下划线和点；基础 StatsD 允许其他不含注入字符的 UTF-8 名称。固定标签先于调用级标签；按第一个 `:` 前的 key 检查重复，重复键直接报错。名称、prefix、Set、标签分别拒绝相应分隔符和 ASCII 控制字符；不静默替换。最终长度按 UTF-8 字节计算。
+## 纯协议编码
 
-## 缓冲与生命周期
+编码和打包不需要 UDP 套接字。可执行包导入根包：
 
-默认数据报 512 字节，来自 StatsD 固定版本文档的保守网络建议；应根据接收器限制和路径 MTU 配置（1..65507）。上限不代表安全 MTU。`pack` 只以换行合并完整 Message，拒绝单条超限；另以 `max_total_bytes` 限制输入总字节数。
+```moonbit
+import {
+  "Ryan-1125/moonstatsd" @statsd,
+}
+pkgtype(kind: "executable")
+```
 
-`with_client` 使用结构化任务作用域和唯一发送任务。仅支持同一 async 事件循环中的协作任务共享，不承诺 OS 线程安全。默认容量 256 条、刷新间隔 100ms、发送/flush/close 时限 1000ms；固定 prefix/标签必须先能与最小指标一起容纳在该数据报预算内，构造时即校验；容量包含发送中的指标。配置限制容量最多 65536，容量乘数据报上限不超过 16MiB。这是 wire 缓冲预算，进程还会使用对象、临时编码和数据报内存。
+```moonbit
+///|
+fn main raise {
+  let message = @statsd.encode("requests", Counter(1.0))
+  assert_eq(message.bytes(), b"requests:1|c")
+  let datagrams = @statsd.pack([message], max_bytes=512)
+  assert_eq(datagrams.length(), 1)
+}
+```
 
-| 操作或情况 | 确定行为 |
-|---|---|
-| 队列满 | 拒绝最新调用并增加 queue_full；不覆盖旧指标 |
-| 定时刷新 / flush | 单一任务发送；flush 是调用前入队项的完成屏障，后续生产者不延长此屏障 |
-| 本机发送错误或发送超时 | 不重试；增加 send_errors（数据报次数）和 dropped（指标数），继续处理后续项 |
-| flush 返回 | 返回累计 Stats，必须检查 dropped/send_errors；不是采集器 ACK |
-| flush 超时或调用者取消 | 只停止该等待者，发送任务继续 |
-| close | 立即拒绝新指标，限时排空；重复调用共享关闭结果 |
-| close 超时或调用者取消 | 取消唯一发送任务，剩余项计入 dropped；其他关闭等待者也观察这次中止 |
-| callback 成功退出 | 自动 close；失败或作用域取消则中止并丢弃未完成项 |
-| 作用域退出 | 等待子任务清理并关闭 socket；逃逸的句柄也已关闭 |
+`encode` 校验并生成不可拆分的 `Message`；`pack` 按换行合并完整消息，遵守单数据报及总输入字节预算。协议层只编码采样声明，实际概率抽样由客户端执行，也可通过 `sampled(rate, draw)` 独立使用。
 
-close 的时限限制排空等待；取消之后的运行时资源清理可能延后完成。超时调用返回后可读取 stats，作用域退出保证清理完成。进程强制终止时无法保证排空。
+## 指标与协议支持
 
-Stats 中 enqueued/submitted/dropped/pending 是指标数；sampled_out 是抽样排除数，queue_full 是满队列拒绝数，send_errors 是失败数据报次数；last_send_error 保留最近一次本机发送错误文本，成功发送不会清除它。InvalidConfig(reason) 提供具体配置原因，目的 UDP 端口 0 会在建 socket 前拒绝。`submitted` 只表示 SDK 的本机 socket 发送调用返回成功。UDP 可能丢失、重复、乱序；取消期间的数据报也可能已经发出，不能把本地 dropped 当作“采集器绝未收到”。
+| 指标或能力 | StatsD | DogStatsD |
+| --- | --- | --- |
+| `Counter`、`Timer`（毫秒）、`Set` | 支持 | 支持 |
+| `Gauge`（非负绝对值） | 支持 | 支持 |
+| `GaugeDelta`（相对变化） | 支持 | 显式拒绝 |
+| `Histogram`、`Distribution` | 显式拒绝 | 支持 |
+| 指标名前缀 `prefix` | 支持 | 支持 |
+| 固定标签与调用级标签 | 显式拒绝 | 支持 |
+| 概率采样 | Counter、Timer | Counter、Timer、Histogram、Distribution |
 
-## 验证命令
+- **明确的 gauge 语义：**负绝对值会报错，避免被解释成相对减少。基础 StatsD 的相对变化使用 `GaugeDelta`；负零 gauge 归一为零。
+- **严格字段校验：**拒绝字段注入、非法控制字符、重复标签键、非有限数值及非法采样率。完整 DogStatsD 名称限定 ASCII 字母、数字、下划线和点。
+- **可测试采样：**采样率取 `(0, 1]`，Gauge 与 Set 必须为 1。默认使用系统熵初始化的 ChaCha8，支持注入随机源。
+- **UTF-8 字节预算：**默认数据报上限 512 字节，支持配置为 `1..65507`；应结合采集器限制与路径 MTU 选择。
+- **名称与数值约定：**`prefix` 原样拼接，请自行包含末尾的 `.`；数值使用有限 IEEE-754 Double。避免用户 ID、完整 URL 等高基数标签。
 
-本次实测 SDK：moon 0.1.20261020 / moonc v0.10.16+b1a0e846e，Node 22.22.1，Go 1.23.2。
+## 有界缓冲与生命周期
+
+默认容量 **256 条**、刷新间隔 **100 ms**、发送及 flush/close 时限 **1000 ms**。单一发送任务管理 UDP 套接字，容量包括发送中的记录。配置限制容量最多 65536 条，容量乘数据报上限不超过 16 MiB 的 wire 缓冲预算。
+
+| 操作 | 行为 |
+| --- | --- |
+| `record` | 校验、概率采样、入队；队列满时拒绝新记录 |
+| 定时刷新 | 按字节预算合并完整指标并发送 |
+| `flush` | 等待调用前已入队记录完成；后续生产者不延长屏障 |
+| flush 超时或取消 | 结束当前等待，发送任务继续 |
+| `close` | 立即拒绝新记录，限时排空；可重复调用 |
+| close 超时或取消 | 中止发送任务，将剩余记录计入丢弃 |
+| 回调正常退出 | 自动关闭；作用域退出时完成资源清理 |
+| 回调失败或作用域取消 | 中止发送并清理资源 |
+
+`stats()` 提供入队、采样排除、队列满、提交、发送错误、丢弃、待处理及关闭状态；`last_send_error` 保留最近一次本机发送错误。
+
+客户端适用于同一 async 事件循环内的协作任务。UDP 可能丢失、重复和乱序，本库采用无重试发送；`submitted` 与 `flush` 是本机处理结果，不是采集器 ACK。当前 API 聚焦指标数据报编码与 UDP 上报，events、service checks 及其他传输方式不属于本版本范围。
+
+## 真实互操作与质量验证
+
+| 验证对象 | 覆盖内容 |
+| --- | --- |
+| native：20 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
+| 纯核心 wasm-gc：6 项通过 | 编码、校验、采样和打包 |
+| StatsD 0.9.0 | counter 采样放大、gauge 相对变化、timer、set 去重 |
+| statsd_exporter 0.28.0 | counter、gauge、timer、histogram、distribution 与标签 |
+| 官方 DogStatsD Agent 7.60.0 | counter、非负 gauge、timer、histogram、set 与标签的真实聚合输出 |
+| datadog-go 5.8.3 | 六种共同指标的 wire 语义差分 |
+| 独立 ZIP 消费与包审计 | 解压包独立编译、真实 UDP、包内资源检查 |
+| Mooncakes 0.1.0 独立消费 | registry 依赖解析、编码与打包、真实 DogStatsD UDP 收发 |
+| Windows / Ubuntu CI | 构建、测试、采集器互操作与独立消费 |
+
+Agent 验证使用固定摘要的官方 Linux amd64 镜像；distribution 的覆盖来自 exporter 与 wire 差分。平台与兼容性声明以实测范围为准；本项目不作吞吐性能或商业 Datadog 后端兼容性保证。
 
 ```powershell
-moon update
-moon fmt --check
 moon info --target native
-moon check --target native --deny-warn
-moon build --target native --deny-warn
-moon test --target native --deny-warn
+moon fmt --check
+moon test --target native
 moon test --target wasm-gc --package Ryan-1125/moonstatsd
 ./tools/install-collectors.ps1
 node tools/test-interop.mjs
 node tools/test-reference.mjs
 ./tools/test-consumer.ps1
-moon package --list
+./tools/test-registry-consumer.ps1
+./tools/audit-package.ps1
 ```
 
-官方 Agent 的独立复现仅在 Linux amd64 + Docker 上运行：
+官方 Agent 复现环境为 Linux amd64、Docker、Node 22 与 MoonBit SDK：
 
 ```sh
 node tools/test-agent.mjs
 ```
 
-Go 用于参考客户端差分；不属于库运行依赖。可通过 `GO_EXE` 指向已有 Go。下载受限时可在当前进程设置 GOPROXY；不要改全局配置。interop 使用本机端口 19102、19125、19126、19127，退出时停止自行启动的接收器。采集器归档版本和 SHA256 在安装脚本固定。仅适配该脚本的 Windows/Linux amd64 资产；这不等于库已经完成跨平台测试。
+## 文档与许可证
 
-`test-reference.mjs` 与 datadog-go v5.8.3 比较共同支持的六种 wire，按数值语义归一 Timer 小数位；不拿格式差异冒充协议错误。`test-consumer.ps1` 从实际 ZIP 解压独立副本建立独立应用，不依赖工作树源码覆盖发布内容。证据输出写入不提交、不打包的 `.local/evidence`；重要实测摘录见 [docs/VALIDATION.md](docs/VALIDATION.md)。
+- [使用细节与生命周期约定](docs/USAGE.md)
+- [发布与验证概览](docs/STATUS.md)
+- [实测命令与结果记录](docs/VALIDATION.md)
+- [协议来源与生态调研](docs/SOURCES.md)
+- [纯核心 API](pkg.generated.mbti) / [异步客户端 API](client/pkg.generated.mbti)
+- [第三方参考与许可证](THIRD_PARTY.md)
 
-CI 覆盖格式、接口差异、check/build/test、真实 UDP、StatsD/exporter、Ubuntu 上的官方 DogStatsD Agent、参考客户端和独立消费；实际远程执行记录见 docs/VALIDATION.md。安装脚本使用官方当前 SDK，并记录版本，后续升级需重新验证。未运行性能基准，不作吞吐或生态唯一性声明。
-
-查重、固定协议资料和许可证见 [docs/SOURCES.md](docs/SOURCES.md) 与 [THIRD_PARTY.md](THIRD_PARTY.md)。项目使用 Apache-2.0。
+MoonStatsD 是依据公开协议重新编写的 MoonBit 原生实现。参考客户端与采集器用于行为对照和测试，不是库的运行时依赖。项目使用 [Apache License 2.0](LICENSE)。

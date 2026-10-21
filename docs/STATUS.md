@@ -1,4 +1,4 @@
-# 当前状态
+# 发布与验证概览
 
 更新日期：2026-10-21。历史命令、失败与修复细节保留在 VALIDATION.md。
 
@@ -20,6 +20,7 @@
 | statsd_exporter 0.28.0 | 实际 counter/gauge/timer/histogram/distribution 和标签验证 |
 | datadog-go 5.8.3 | 六种共同 wire 语义差分通过 |
 | 独立消费 | 实际 ZIP 解压副本、独立应用编译与真实 UDP 通过 |
+| Mooncakes 0.1.0 消费 | 从 registry 解析依赖，独立应用编码、打包与真实 DogStatsD UDP 收发通过 |
 | Windows / Ubuntu CI | a547b5b 两个平台全流程成功，native 20/20、核心 wasm-gc 6/6 |
 | 官方 DogStatsD Agent 7.60.0 | Ubuntu CI 真实通过：采样计数、gauge、timer、histogram、set 与标签 |
 
@@ -27,15 +28,20 @@
 官方二进制报告 7.60.0 / commit 799e298。其真实输出中 counter 为 rate=0.4、
 interval=10（折算计数 4），gauge=7、timer.avg=250、histogram.avg=42、set=2。
 
-## 保留边界
+## 发布
+
+- Mooncakes 0.1.0 已发布：[`Ryan-1125/moonstatsd`](https://mooncakes.io/docs/Ryan-1125/moonstatsd)。
+- 安装：`moon add Ryan-1125/moonstatsd`。
+- 全新消费验证：`./tools/test-registry-consumer.ps1`，无本地源码或 workspace 覆盖。
+- 公开 GitHub 仓库提供源码、示例、CI、许可证和可复现验证工具。
+
+## 使用与兼容范围
 
 - UDP 发送成功不保证采集器收到；flush 返回本机结果，不是 ACK。
 - 只支持同一 async 事件循环的协作任务，不承诺 OS 线程安全。
 - Agent 测试范围为 counter、非负 gauge、timer、histogram、set 和标签。
   Distribution 的 Agent sketches 输出不在该项断言范围内。
 - 未做吞吐性能基准，未验证其他 CPU 架构或完整商业 Datadog 后端。
-- Mooncakes 尚未发布；registry 全新安装验证、申报书及报名尚未完成。
-- 公开 GitHub 仓库已经创建并上传，未提交赛事表单。
 
 真实 Agent 的本地复现需要 Linux amd64 + Docker + Node 22 和当前 MoonBit SDK：
 
