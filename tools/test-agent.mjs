@@ -17,7 +17,7 @@ let commandLog='';
 function docker(args, required=true){
   const r=spawnSync('docker',args,{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});
   commandLog+=`> docker ${args.join(' ')}\n${r.stdout||''}${r.stderr||''}exit=${r.status}\n`;
-  if(required)assert.equal(r.status,0,String(r.error||r.stderr));
+  if(required)assert.equal(r.status,0,`${r.error||''}${r.stdout||''}${r.stderr||''}`.slice(-4000));
   return r.stdout||'';
 }
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
@@ -69,8 +69,6 @@ try {
     '-e','DD_LOG_LEVEL=warn',image]);started=true;
   const address=JSON.parse(docker(['inspect',container]))[0].NetworkSettings.Networks[network].IPAddress;
   assert.match(address,/^\d+\.\d+\.\d+\.\d+$/);
-  const version=docker(['exec',container,'/dogstatsd','version']);
-  assert.match(version,/7\.60\.0/);writeFileSync(resolve(dir,'version.txt'),version);
   await until(()=>{
     const result=spawnSync('docker',['exec',container,'/probe.sh'],{encoding:'utf8',timeout:10000});
     return result.status===0;
@@ -80,6 +78,9 @@ try {
     writeFileSync(resolve(dir,'udp-listeners.txt'),sockets);
     return /^\s*\d+:\s+[A-F0-9]+:1FBD\s/im.test(sockets);
   },60);
+  const version=docker(['exec',container,'/dogstatsd','version']);
+  assert.match(version,/7\.60\.0/);writeFileSync(resolve(dir,'version.txt'),version);
+  console.log('Official Agent health and UDP listener ready; version verified');
   const workload=spawnSync('moon',['run','cmd/agent','--target','native'],{encoding:'utf8',timeout:60000,env:{...process.env,MOONSTATSD_ADDR:`${address}:8125`}});
   writeFileSync(resolve(dir,'workload.log'),(workload.stdout||'')+(workload.stderr||''));
   assert.equal(workload.status,0,String(workload.error||workload.stderr));

@@ -262,3 +262,15 @@ Added regression cases reject oversized prefix overhead, fixed-tag overhead and
 excessive tag count without entering the callback. Local result:
 `moon test --target native --deny-warn`: 20 passed, 0 failed. This is a bound/order
 correction, not a measured heap or throughput claim.
+
+## Second Agent run: entrypoint/version-check race
+
+Run 39541417346 at 1dc67ac failed before workload submission: immediate
+`docker exec /dogstatsd version` returned exit 126 (permission denied). The fixed
+image entrypoint performs chmod and sync before launching DogStatsD, so invoking
+the binary immediately after `docker run -d` raced that initialization. Version
+inspection was moved after both the real health and UDP socket readiness checks.
+Command failures now include bounded stdout/stderr in the CI assertion message;
+the original command logs and empty intake output are retained locally under
+.local/evidence/agent-ci-second. This was a test-driver startup race, not evidence
+of a MoonBit encoding or send failure.
