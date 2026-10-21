@@ -12,7 +12,7 @@ try {
     $names = @($zip.Entries | ForEach-Object { $_.FullName })
     $names | Set-Content (Join-Path $projectRoot '.local/package-list.txt')
     $names | Set-Content (Join-Path $projectRoot '.local/evidence/package-list.txt')
-    $bad = $names | Where-Object { $_ -match '(^|[/\\])(\.local|\.git|\.github|\.mooncakes|_build)([/\\])|credentials|\.log$|\.exe$|\.pid$' }
+    $bad = $names | Where-Object { $_ -match '(^|[/\\])(\.local|\.git|\.github|\.mooncakes|_build)([/\\])|credentials|(^|[/\\])shenbao\.md$|\.log$|\.exe$|\.pid$' }
     if ($bad) { throw "Unexpected package entries: $bad" }
     if ($names -notcontains 'moon.mod' -or $names -notcontains 'client/client.mbt') { throw 'Required library sources missing' }
     Write-Output "Actual ZIP audit passed: $($names.Count) entries, no private/build artifacts."

@@ -6,4 +6,5 @@ target
 .moonagent/
 .local/
 *.log
+/shenbao.md
 

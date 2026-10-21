@@ -349,3 +349,11 @@ local submitted=3, send errors=0
 ```
 
 此 UDP 示例输出是本机发送结果；接收字节断言由前述 registry UDP 测试独立覆盖。README、使用约定和状态文档的本地链接检查，以及 `git diff --check` 均通过。`moon info --target native` 与 `moon fmt` 通过，公开 `.mbti` 接口无变化。
+
+最终包审计发现 `shenbao.md` 未被原 `.moonignore` 排除；首次审计只检查通用私有目录，未识别该文件。补充 `.gitignore`、`.moonignore` 规则及审计断言后，重新打包结果为：
+
+```text
+Actual ZIP audit passed: 42 entries, no private/build artifacts.
+```
+
+registry 下载的既有 0.1.0 中仍有该文件；本地排除规则不修改已经发布的版本。本轮没有替换或删除线上版本。
