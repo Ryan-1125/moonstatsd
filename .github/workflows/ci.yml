@@ -57,6 +57,9 @@ jobs:
           ./tools/install-collectors.ps1
           node tools/test-interop.mjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Official DogStatsD Agent (isolated local intake)
+        if: runner.os == 'Linux'
+        run: node tools/test-agent.mjs
       - name: Reference client differential
         run: node tools/test-reference.mjs
       - name: Independent ZIP consumer and package audit
@@ -69,3 +72,4 @@ jobs:
         with:
           name: evidence-${{ matrix.os }}
           path: .local/evidence
+          include-hidden-files: true

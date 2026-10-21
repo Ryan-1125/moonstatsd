@@ -87,3 +87,25 @@ Actual datadog-go v5.8.3 differential was subsequently run (Go 1.23.2). Six comm
 wire cases agree after numeric normalization of Timer 12.500000 vs 12.5. The first
 proxy.golang.org download timed out; a process-local GOPROXY=https://goproxy.cn
 retry completed with Go checksum validation. No global Go settings were changed.
+
+## Official DogStatsD test setup (verification initially pending)
+
+Added an Ubuntu-only Docker integration using official datadog/dogstatsd 7.60.0,
+Linux amd64 digest
+sha256:e4cbd4b82011b3dec10d7598e51d766e5a4ba9d4fe372f54197daeccb27529ee.
+Digest was obtained from Docker Hub tag metadata. Fixed Agent source README,
+Dockerfile, entrypoint, probe, configuration setup and serializer were inspected.
+Apache-2.0 LICENSE was checked. Configuration uses the actual `use_v2_api.series`
+key via DD_USE_V2_API_SERIES=false, not a guessed serializer option.
+
+The official parser/aggregator/forwarder runs in an internal Docker network;
+its output goes to a bounded local HTTP sink using a deliberately dummy API key.
+The sink decodes Agent output JSON only and never parses input StatsD packets.
+Assertions target sampled counts (accounting for the Agent rate interval), gauge,
+Timer/Histogram averages, Set uniqueness and tags. Distribution sketches are not
+claimed by this test; their existing exporter/wire verification remains separate.
+
+Local Windows cannot execute this integration: Docker is absent and WSL has no
+Linux distribution. The Agent workload compiles, the Node script parses, and CI
+will supply the real Linux runtime. Until an actual successful job is observed,
+this setup is not evidence that Agent interoperability passed.
