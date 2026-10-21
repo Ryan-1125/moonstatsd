@@ -14,4 +14,16 @@
 - Preserve the most recent local send failure in Stats.last_send_error.
 - Explain InvalidConfig rejections and reject destination UDP port zero before socket creation.
 - Normalize repository checkout line endings; repaired Windows CI format checking.
-- Create and upload the authorized private GitHub repository; preserve exact per-commit CI evidence.
+- Create and upload the GitHub repository, then make it public after user selection; preserve exact per-commit CI evidence.
+
+### Concurrency and official-Agent validation work
+
+- Add real UDP regression for flush snapshot isolation from later admissions,
+  close racing an active producer, and fixed/per-call tag mutation isolation.
+- Add a digest-pinned official DogStatsD 7.60.0 Docker test with a bounded local
+  HTTP output sink, internal network, dummy key and exact aggregate/tag assertions.
+- Keep Agent execution on Linux CI; Windows has no Docker runtime in the local
+  environment. Actual Ubuntu run a547b5b passed the official Agent aggregate/tag assertions.
+- Add docs/STATUS.md as a compact current summary alongside historical logs.
+- Validate fixed configuration against actual packet budget before copying tags; reject unusable prefix/tag overhead at construction.
+- Native regressions: 20/20; pure wasm-gc core: 6/6; Windows and Ubuntu CI passed at a547b5b.

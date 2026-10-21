@@ -88,7 +88,7 @@ wire cases agree after numeric normalization of Timer 12.500000 vs 12.5. The fir
 proxy.golang.org download timed out; a process-local GOPROXY=https://goproxy.cn
 retry completed with Go checksum validation. No global Go settings were changed.
 
-## Official DogStatsD test setup (verification initially pending)
+## Official DogStatsD fixed test setup
 
 Added an Ubuntu-only Docker integration using official datadog/dogstatsd 7.60.0,
 Linux amd64 digest
@@ -107,5 +107,6 @@ claimed by this test; their existing exporter/wire verification remains separate
 
 Local Windows cannot execute this integration: Docker is absent and WSL has no
 Linux distribution. The Agent workload compiles, the Node script parses, and CI
-will supply the real Linux runtime. Until an actual successful job is observed,
-this setup is not evidence that Agent interoperability passed.
+supplied the real Linux runtime. The initial failing runs and successful rerun
+are recorded in VALIDATION.md. Successful run 39542103570 at a547b5b verified the
+declared aggregate/tag assertions; see STATUS.md for current coverage.

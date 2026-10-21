@@ -274,3 +274,45 @@ Command failures now include bounded stdout/stderr in the CI assertion message;
 the original command logs and empty intake output are retained locally under
 .local/evidence/agent-ci-second. This was a test-driver startup race, not evidence
 of a MoonBit encoding or send failure.
+
+## Official Agent and platform completion
+
+Run https://github.com/Ryan-1125/moonstatsd/actions/runs/39542103570 at a547b5b
+completed successfully on both Windows and Ubuntu. Actual Ubuntu job 119031942897:
+
+```
+Total tests: 20, passed: 20, failed: 0.
+Total tests: 6, passed: 6, failed: 0.
+Official Agent health and UDP listener ready; version verified
+Official DogStatsD Agent 7.60.0: sampled count=4, gauge=7, timer.avg=250ms, histogram.avg=42, set=2; tags verified
+datadog-go v5.8.3: 6 wire cases semantically equal (timer decimal formatting normalized)
+Independent published-ZIP consumer: codec and real UDP passed
+Actual ZIP audit passed: 39 entries, no private/build artifacts.
+```
+
+The official binary reports commit 799e298, serialization v5.0.134, Go 1.22.8.
+Downloaded output assertions show:
+
+| Actual Agent metric | Type / interval | Point value |
+|---|---|---|
+| moonagent.count | rate / 10s | 0.4 (estimated count 4) |
+| moonagent.queue | gauge / 10s | 7 |
+| moonagent.timer.avg | gauge / 10s | 250 (input ms retained) |
+| moonagent.payload.avg | gauge / 10s | 42 |
+| moonagent.unique | gauge / 10s | 2 |
+
+All five series include env:test, service:demo and route:home. Real outputs,
+version, container socket table, image metadata, request sizes and command logs
+were downloaded to .local/evidence/agent-ci-passed. Distribution sketches are
+explicitly disabled/not asserted, and the remote commercial backend is not used.
+The local HTTP sink only accepts forwarded Agent output, not StatsD input.
+
+Git HTTPS connections reset repeatedly during this round. Two existing commits
+were uploaded through official Git Data API with exact blob/tree/commit SHA
+checks before a non-forced ref update. The local and remote a547b5b match exactly;
+author, timestamps and parent history were not rewritten. No credentials were
+written to files or logs. The operations helper itself remains ignored in .local.
+
+STATUS.md was added after the 39-entry CI artifact above; the final local package
+contains 40 entries. No package registry publication or hackathon submission was
+performed in this round.

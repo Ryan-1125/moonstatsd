@@ -1,23 +1,24 @@
 # MoonStatsD
 
 MoonBit 原生 StatsD / DogStatsD 编码器与有界异步 UDP 客户端。当前为开发版 **0.1.0**，未发布到 Mooncakes。代码仓库：[Ryan-1125/moonstatsd](https://github.com/Ryan-1125/moonstatsd)（公开）。
+当前验证范围和未完成事项见 [当前状态](docs/STATUS.md)。
 交接文档中的 API 是最初草案；实际公开接口以 `pkg.generated.mbti` 和 `client/pkg.generated.mbti` 为准。
 
 ## 支持范围
 
 | 能力 | 基础 StatsD | DogStatsD | 已做的真实验证 |
 |---|---|---|---|
-| Counter / Timer（毫秒） | 是 | 是 | StatsD 0.9.0、statsd_exporter 0.28.0 |
-| 非负绝对 Gauge | 是 | 是 | 两个接收器验证最终值 |
+| Counter / Timer（毫秒） | 是 | 是 | StatsD 0.9.0、statsd_exporter 0.28.0、官方 DogStatsD 7.60.0 |
+| 非负绝对 Gauge | 是 | 是 | 上述三个真实接收器验证最终值 |
 | GaugeDelta | 是 | 拒绝 | StatsD 0.9.0：10 加 -3 得到 7 |
 | 负绝对 Gauge | 明确报错 | 明确报错 | 不把它误作负增量 |
-| Set | 是 | 是 | StatsD 0.9.0 去重；DogStatsD wire 差分 |
-| Histogram / Distribution | 拒绝 | 是 | statsd_exporter 0.28.0 |
+| Set | 是 | 是 | StatsD 0.9.0 / 官方 DogStatsD 7.60.0 去重；wire 差分 |
+| Histogram / Distribution | 拒绝 | 是 | h：exporter 与官方 DogStatsD；d：exporter 与 wire 差分 |
 | namespace、固定及调用级标签 | namespace；拒绝标签 | 是 | 采集器标签和参考客户端 wire |
 | 概率采样 | Counter、Timer | 再加 Histogram、Distribution | 确定随机源测试；StatsD 采样放大 |
 
 不实现 events、service checks、客户端聚合、重试、可靠交付、TCP、Unix socket、TLS 或来源识别。
-已实测 **Windows amd64 native**，并已获得 Ubuntu native 全流程 CI 结果；纯核心另在 wasm-gc 通过测试。诊断改进提交 39db0b3 及后续文档提交 accf41c 的 Windows、Ubuntu CI 均已全流程通过；精确提交和结果见验证记录。Datadog Agent 本身未运行，支持声明限于以上协议与接收器范围。
+已实测 **Windows amd64 native**，并已获得 Ubuntu native 全流程 CI 结果；纯核心另在 wasm-gc 通过测试。提交 a547b5b 的 Windows、Ubuntu CI 均全流程通过：native 20/20、核心 wasm-gc 6/6。官方 standalone DogStatsD Agent 7.60.0 已在 Ubuntu Docker 中完成真实联调；Distribution sketches 和商业 Datadog 后端不在这项验证范围内。
 
 ## 使用
 
@@ -60,7 +61,7 @@ prefix 原样拼接，请自行包含末尾的 `.`。DogStatsD 的完整名称�
 
 默认数据报 512 字节，来自 StatsD 固定版本文档的保守网络建议；应根据接收器限制和路径 MTU 配置（1..65507）。上限不代表安全 MTU。`pack` 只以换行合并完整 Message，拒绝单条超限；另以 `max_total_bytes` 限制输入总字节数。
 
-`with_client` 使用结构化任务作用域和唯一发送任务。仅支持同一 async 事件循环中的协作任务共享，不承诺 OS 线程安全。默认容量 256 条、刷新间隔 100ms、发送/flush/close 时限 1000ms；容量包含发送中的指标。配置限制容量最多 65536，容量乘数据报上限不超过 16MiB。这是 wire 缓冲预算，进程还会使用对象、临时编码和数据报内存。
+`with_client` 使用结构化任务作用域和唯一发送任务。仅支持同一 async 事件循环中的协作任务共享，不承诺 OS 线程安全。默认容量 256 条、刷新间隔 100ms、发送/flush/close 时限 1000ms；固定 prefix/标签必须先能与最小指标一起容纳在该数据报预算内，构造时即校验；容量包含发送中的指标。配置限制容量最多 65536，容量乘数据报上限不超过 16MiB。这是 wire 缓冲预算，进程还会使用对象、临时编码和数据报内存。
 
 | 操作或情况 | 确定行为 |
 |---|---|
@@ -97,10 +98,16 @@ node tools/test-reference.mjs
 moon package --list
 ```
 
+官方 Agent 的独立复现仅在 Linux amd64 + Docker 上运行：
+
+```sh
+node tools/test-agent.mjs
+```
+
 Go 用于参考客户端差分；不属于库运行依赖。可通过 `GO_EXE` 指向已有 Go。下载受限时可在当前进程设置 GOPROXY；不要改全局配置。interop 使用本机端口 19102、19125、19126、19127，退出时停止自行启动的接收器。采集器归档版本和 SHA256 在安装脚本固定。仅适配该脚本的 Windows/Linux amd64 资产；这不等于库已经完成跨平台测试。
 
 `test-reference.mjs` 与 datadog-go v5.8.3 比较共同支持的六种 wire，按数值语义归一 Timer 小数位；不拿格式差异冒充协议错误。`test-consumer.ps1` 从实际 ZIP 解压独立副本建立独立应用，不依赖工作树源码覆盖发布内容。证据输出写入不提交、不打包的 `.local/evidence`；重要实测摘录见 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
-CI 覆盖格式、接口差异、check/build/test、真实 UDP、两个采集器、参考客户端和独立消费；实际远程执行记录见 docs/VALIDATION.md。安装脚本使用官方当前 SDK，并记录版本，后续升级需重新验证。未运行性能基准，不作吞吐或生态唯一性声明。
+CI 覆盖格式、接口差异、check/build/test、真实 UDP、StatsD/exporter、Ubuntu 上的官方 DogStatsD Agent、参考客户端和独立消费；实际远程执行记录见 docs/VALIDATION.md。安装脚本使用官方当前 SDK，并记录版本，后续升级需重新验证。未运行性能基准，不作吞吐或生态唯一性声明。
 
 查重、固定协议资料和许可证见 [docs/SOURCES.md](docs/SOURCES.md) 与 [THIRD_PARTY.md](THIRD_PARTY.md)。项目使用 Apache-2.0。
