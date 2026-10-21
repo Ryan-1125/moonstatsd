@@ -357,3 +357,19 @@ Actual ZIP audit passed: 42 entries, no private/build artifacts.
 ```
 
 registry 下载的既有 0.1.0 中仍有该文件；本地排除规则不修改已经发布的版本。本轮没有替换或删除线上版本。
+
+## 2026-10-21：README 示例自动验收
+
+新增 `tools/test-readme.ps1`：从 README 原样提取两组 `moon.pkg` / `main.mbt`，创建无 workspace 覆盖的独立 registry 消费应用，以 deny-warn 检查并运行。Windows/Ubuntu CI 增加 registry 消费与该示例校验步骤。
+
+本轮 `moon update` 两次因 Mooncakes 443 连接失败而停止，未将其计为通过。随后显式运行 `./tools/test-readme.ps1 -SkipUpdate`，使用此前从 registry 下载的依赖缓存（不替换为本地源码），结果：
+
+```text
+Using cached moonbitlang/async@0.20.0
+Using cached Ryan-1125/moonstatsd@0.1.0
+Finished. moon: ran 21 tasks, now up to date
+local submitted=3, send errors=0
+README examples passed: published dependency, exact source, compile and run (UDP output is local submission only).
+```
+
+`-SkipUpdate` 只跳过索引刷新，默认 CI 仍执行线上索引检查。完整本地日志：`.local/evidence/readme-examples-cached.log`；线上失败日志：`.local/evidence/readme-examples.log`。

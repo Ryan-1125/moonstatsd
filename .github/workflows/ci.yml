@@ -51,6 +51,11 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           moon test --target wasm-gc --package Ryan-1125/moonstatsd --deny-warn
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Published package and README examples
+        shell: pwsh
+        run: |
+          ./tools/test-registry-consumer.ps1
+          ./tools/test-readme.ps1
       - name: Fixed real collectors
         shell: pwsh
         run: |

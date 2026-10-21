@@ -147,8 +147,11 @@ node tools/test-interop.mjs
 node tools/test-reference.mjs
 ./tools/test-consumer.ps1
 ./tools/test-registry-consumer.ps1
+./tools/test-readme.ps1
 ./tools/audit-package.ps1
 ```
+
+CI 还会从 Mooncakes 安装 0.1.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
 
 官方 Agent 复现环境为 Linux amd64、Docker、Node 22 与 MoonBit SDK：
 
