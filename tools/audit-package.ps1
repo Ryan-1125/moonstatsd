@@ -1,12 +1,14 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot 'module-metadata.ps1')
+$module = Get-ModuleMetadata -ProjectRoot $projectRoot
 Push-Location $projectRoot
 try {
   New-Item -ItemType Directory -Force (Join-Path $projectRoot '.local/evidence') | Out-Null
   & moon package --list
   if ($LASTEXITCODE -ne 0) { throw 'package check failed' }
   Add-Type -AssemblyName System.IO.Compression.FileSystem
-  $archive = Join-Path $projectRoot '_build/publish/Ryan-1125-moonstatsd-0.1.0.zip'
+  $archive = $module.Archive
   $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
   try {
     $names = @($zip.Entries | ForEach-Object { $_.FullName })

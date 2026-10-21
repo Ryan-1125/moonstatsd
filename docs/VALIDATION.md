@@ -373,3 +373,24 @@ README examples passed: published dependency, exact source, compile and run (UDP
 ```
 
 `-SkipUpdate` 只跳过索引刷新，默认 CI 仍执行线上索引检查。完整本地日志：`.local/evidence/readme-examples-cached.log`；线上失败日志：`.local/evidence/readme-examples.log`。
+
+## 2026-10-21：发布工具随模块版本自动定位 ZIP
+
+`tools/module-metadata.ps1` 读取 moon.mod 的模块名和语义版本，供包审计与 ZIP 独立消费共同使用，消除写死的 0.1.0 归档及消费依赖。缺失或非字面量元数据会显式报错。Registry 和 README 验证仍固定为实际已发布的 0.1.0，避免把未发布版本当作线上包。
+
+实测 `./tools/test-consumer.ps1 -SkipUpdate`（缓存模式）：
+
+```text
+Independent published-ZIP consumer: codec and real UDP passed
+```
+
+在实际 ZIP 的隔离解压副本中只将版本改为 0.1.1，执行其包审计脚本：
+
+```text
+Package to .../Ryan-1125-moonstatsd-0.1.1.zip
+Actual ZIP audit passed: 44 entries, no private/build artifacts.
+```
+
+最初副本位于 .local 下，父目录忽略规则导致归档为空，审计正确拒绝缺失源码；临时移至工作区非隐藏目录后真实生成并审计 0.1.1 包，完成后移回 .local。主项目版本仍为 0.1.0，没有发布新版本。日志：`.local/evidence/version-consumer.log`、`.local/evidence/version-next-package.log`。
+
+最终回归：`moon info --target native`、`moon fmt`、`git diff --check` 通过，公开接口无变化；native 20/20、纯核心 wasm-gc 6/6；主项目实际 0.1.0 ZIP 审计通过，44 个条目。两项新增脚本和验证记录均进入包，个人申报材料继续排除。

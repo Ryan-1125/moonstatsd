@@ -1,26 +1,30 @@
-param()
+param([switch]$SkipUpdate)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot 'module-metadata.ps1')
+$module = Get-ModuleMetadata -ProjectRoot $projectRoot
 Push-Location $projectRoot
 try {
   & moon package
   if ($LASTEXITCODE -ne 0) { throw 'moon package failed' }
-  $archive = Join-Path $projectRoot '_build/publish/Ryan-1125-moonstatsd-0.1.0.zip'
+  $archive = $module.Archive
   $consumerRoot = Join-Path $projectRoot ('.local/consumer-' + [guid]::NewGuid().ToString('N'))
   $library = Join-Path $consumerRoot 'library'
   $app = Join-Path $consumerRoot 'app'
   New-Item -ItemType Directory -Force $app | Out-Null
   Expand-Archive -LiteralPath $archive -DestinationPath $library
   'members = ["library", "app"]' | Set-Content (Join-Path $consumerRoot 'moon.work')
-  @'
+  $consumerManifest = @'
 name = "local/moonstatsd-consumer"
 preferred_target = "native"
-import { "Ryan-1125/moonstatsd@0.1.0", "moonbitlang/async@0.20.0" }
-'@ | Set-Content (Join-Path $app 'moon.mod')
-  @'
-import { "Ryan-1125/moonstatsd" @codec, "Ryan-1125/moonstatsd/client", "moonbitlang/async", "moonbitlang/async/socket" }
+import { "__MODULE__@__VERSION__", "moonbitlang/async@0.20.0" }
+'@
+  $consumerManifest.Replace('__MODULE__', $module.Name).Replace('__VERSION__', $module.Version) | Set-Content (Join-Path $app 'moon.mod')
+  $consumerPackage = @'
+import { "__MODULE__" @codec, "__MODULE__/client", "moonbitlang/async", "moonbitlang/async/socket" }
 pkgtype(kind: "executable")
-'@ | Set-Content (Join-Path $app 'moon.pkg')
+'@
+  $consumerPackage.Replace('__MODULE__', $module.Name) | Set-Content (Join-Path $app 'moon.pkg')
   @'
 ///|
 async fn main {
@@ -39,8 +43,10 @@ async fn main {
 '@ | Set-Content (Join-Path $app 'main.mbt')
   Push-Location $app
   try {
-    & moon update
-    if ($LASTEXITCODE -ne 0) { throw 'consumer dependency update failed' }
+    if (-not $SkipUpdate) {
+      & moon update
+      if ($LASTEXITCODE -ne 0) { throw 'consumer dependency update failed' }
+    }
     & moon run . --target native
     if ($LASTEXITCODE -ne 0) { throw 'independent consumer failed' }
   } finally { Pop-Location }
