@@ -4,7 +4,6 @@ import {spawnSync} from 'node:child_process';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import http from 'node:http';
-import dgram from 'node:dgram';
 import {inflateSync, gunzipSync} from 'node:zlib';
 import assert from 'node:assert/strict';
 assert.equal(process.platform, 'linux', 'Real Agent integration requires Linux Docker; no mock fallback');
@@ -50,7 +49,6 @@ let networkCreated=false;
 let started=false;
 try {
   await new Promise((ok,bad)=>{intake.once('error',bad);intake.listen(19129,'0.0.0.0',ok);});
-  await new Promise((ok,bad)=>{const socket=dgram.createSocket('udp4');socket.once('error',e=>{socket.close();bad(e)});socket.bind(19128,'127.0.0.1',()=>socket.close(ok));});
   docker(['version']);
   docker(['pull',image]);
   writeFileSync(resolve(dir,'image.json'),docker(['image','inspect',image]));
@@ -58,8 +56,10 @@ try {
   const meta=JSON.parse(docker(['network','inspect',network]));
   const gateway=meta[0].IPAM.Config[0].Gateway;
   assert.match(gateway,/^\d+\.\d+\.\d+\.\d+$/);
+  const config=resolve('.local/agent-runtime.yaml');
+  writeFileSync(config, `health_port: 5555\nenable_gohai: false\ndogstatsd_socket: ""\ndogstatsd_port: 8125\nbind_host: 0.0.0.0\ndogstatsd_non_local_traffic: true\n`);
   docker(['run','-d','--rm','--name',container,'--network',network,
-    '-p','127.0.0.1:19128:8125/udp',
+    '-v',`${config}:/etc/datadog-agent/dogstatsd.yaml:ro`,
     '-e','DD_API_KEY=00000000000000000000000000000000',
     '-e',`DD_DD_URL=http://${gateway}:19129`,
     '-e','DD_HOSTNAME=moonstatsd-integration',
@@ -67,13 +67,20 @@ try {
     '-e','DD_SERIALIZER_COMPRESSOR_KIND=zlib',
     '-e','DD_ENABLE_PAYLOADS_SKETCHES=false',
     '-e','DD_LOG_LEVEL=warn',image]);started=true;
+  const address=JSON.parse(docker(['inspect',container]))[0].NetworkSettings.Networks[network].IPAddress;
+  assert.match(address,/^\d+\.\d+\.\d+\.\d+$/);
   const version=docker(['exec',container,'/dogstatsd','version']);
   assert.match(version,/7\.60\.0/);writeFileSync(resolve(dir,'version.txt'),version);
   await until(()=>{
     const result=spawnSync('docker',['exec',container,'/probe.sh'],{encoding:'utf8',timeout:10000});
     return result.status===0;
   },60);
-  const workload=spawnSync('moon',['run','cmd/agent','--target','native'],{encoding:'utf8',timeout:60000,env:{...process.env,MOONSTATSD_ADDR:'127.0.0.1:19128'}});
+  await until(()=>{
+    const sockets=docker(['exec',container,'cat','/proc/net/udp','/proc/net/udp6'],false);
+    writeFileSync(resolve(dir,'udp-listeners.txt'),sockets);
+    return /^\s*\d+:\s+[A-F0-9]+:1FBD\s/im.test(sockets);
+  },60);
+  const workload=spawnSync('moon',['run','cmd/agent','--target','native'],{encoding:'utf8',timeout:60000,env:{...process.env,MOONSTATSD_ADDR:`${address}:8125`}});
   writeFileSync(resolve(dir,'workload.log'),(workload.stdout||'')+(workload.stderr||''));
   assert.equal(workload.status,0,String(workload.error||workload.stderr));
   const sample=(name,predicate)=>series.find(s=>s.metric===name && predicate(s));

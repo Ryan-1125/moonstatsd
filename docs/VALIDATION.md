@@ -228,3 +228,22 @@ These tests assert local submission/accounting and selected received bytes, not
 reliable delivery of every UDP datagram. Timeout-based schedule assumptions are
 avoided: task yields and a backlog larger than a single packet establish the
 competition under test.
+
+## First official Agent run and readiness correction
+
+Run 39540842638 at 614bdde: Windows all steps passed, Ubuntu native 19/19 and
+wasm-gc 6/6 passed, but the new real Agent stage timed out. Official binary output:
+`DogStatsD 7.60.0 - Commit: 799e298 - Serialization version: v5.0.134 - Go version: go1.22.8`.
+HTTP intake received valid compressed JSON containing only Agent started/running
+metrics, with no moonagent workload metrics. No decoding errors were observed.
+The workload reported seven local submissions; that did not establish receipt.
+Raw logs/series are retained under .local/evidence/agent-ci-first.
+
+The Agent also logged an unavailable default UDS directory; fixed source shows
+that this warning alone does not prevent an independent UDP listener. The test
+was corrected to explicitly disable UDS in its mounted YAML, verify UDP port 8125
+in the real container socket table, and send directly to the internal container IP
+instead of relying on published-port routing in an internal Docker network.
+The health probe is retained but is no longer the sole readiness condition.
+This describes observed failure and corrective changes, not an inferred upstream
+Agent defect or a successful run before the rerun completes.
