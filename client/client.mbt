@@ -248,18 +248,11 @@ pub async fn[T] with_client(
   if addr.port() == 0 {
     raise InvalidConfig("destination UDP port must be nonzero")
   }
-  let tags = fixed_tags.copy()
   // Validate configuration even if callback emits no metrics.
   ignore(
-    @codec.encode(
-      "config",
-      Counter(0.0),
-      mode~,
-      prefix~,
-      fixed_tags=tags,
-      max_bytes=65507,
-    ),
+    @codec.encode("x", Counter(0.0), mode~, prefix~, fixed_tags~, max_bytes~),
   )
+  let tags = fixed_tags.copy()
   let draw = match random {
     Some(f) => f
     None => {

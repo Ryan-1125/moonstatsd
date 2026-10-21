@@ -354,3 +354,55 @@ async test "fixed and call tags are snapshotted before caller mutation" {
     )
   })
 }
+
+///|
+async test "fixed configuration must fit actual datagram budget before callback" {
+  let destination = @socket.Addr::parse("127.0.0.1:8125")
+  let mut entered = false
+  assert_true(
+    try {
+      @client.with_client(
+        destination,
+        _ => entered = true,
+        prefix="svc.",
+        max_bytes=5,
+      )
+      false
+    } catch {
+      @codec.TooLarge(_, _) => true
+      _ => false
+    },
+  )
+  assert_false(entered)
+  assert_true(
+    try {
+      @client.with_client(
+        destination,
+        _ => entered = true,
+        mode=DogStatsD,
+        fixed_tags=["env:test"],
+        max_bytes=8,
+      )
+      false
+    } catch {
+      @codec.TooLarge(_, _) => true
+      _ => false
+    },
+  )
+  assert_false(entered)
+  assert_true(
+    try {
+      @client.with_client(
+        destination,
+        _ => entered = true,
+        mode=DogStatsD,
+        fixed_tags=Array::make(513, "tag"),
+      )
+      false
+    } catch {
+      @codec.TooLarge(_, _) => true
+      _ => false
+    },
+  )
+  assert_false(entered)
+}

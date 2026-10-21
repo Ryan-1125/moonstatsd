@@ -247,3 +247,18 @@ instead of relying on published-port routing in an internal Docker network.
 The health probe is retained but is no longer the sole readiness condition.
 This describes observed failure and corrective changes, not an inferred upstream
 Agent defect or a successful run before the rerun completes.
+
+## Constructor resource-bound correction
+
+Review found that fixed_tags was copied before applying encoder input bounds, and
+configuration overhead was checked against 65507 instead of the configured packet
+budget. The constructor now validates a minimal `x:0|c` metric with the actual
+prefix, fixed tags and max_bytes before copying the bounded array. This rejects
+unusable configurations early and avoids a redundant potentially large copy of
+invalid caller input. Individual records still undergo full independent size
+validation. The existing five-byte packet tests continue to pass.
+
+Added regression cases reject oversized prefix overhead, fixed-tag overhead and
+excessive tag count without entering the callback. Local result:
+`moon test --target native --deny-warn`: 20 passed, 0 failed. This is a bound/order
+correction, not a measured heap or throughput claim.
