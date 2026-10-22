@@ -12,6 +12,12 @@ try {
   $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
   try {
     $names = @($zip.Entries | ForEach-Object { $_.FullName })
+    $allowed = @(Get-Content (Join-Path $PSScriptRoot 'package-files.txt') | Where-Object { $_ -and -not $_.StartsWith('#') })
+    $unexpected = @($names | Where-Object { $_ -notin $allowed })
+    $missing = @($allowed | Where-Object { $_ -notin $names })
+    if ($unexpected -or $missing) {
+      throw "Package allowlist mismatch; unexpected: $unexpected; missing: $missing"
+    }
     $names | Set-Content (Join-Path $projectRoot '.local/package-list.txt')
     $names | Set-Content (Join-Path $projectRoot '.local/evidence/package-list.txt')
     $bad = $names | Where-Object { $_ -match '(^|[/\\])(\.local|\.git|\.github|\.mooncakes|_build)([/\\])|credentials|(^|[/\\])shenbao\.md$|\.log$|\.exe$|\.pid$' }

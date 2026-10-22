@@ -1,7 +1,7 @@
 # MoonStatsD
 
 [![Verify](https://github.com/Ryan-1125/moonstatsd/actions/workflows/ci.yml/badge.svg)](https://github.com/Ryan-1125/moonstatsd/actions/workflows/ci.yml)
-[![Mooncakes](https://img.shields.io/badge/Mooncakes-0.1.0-blue)](https://mooncakes.io/docs/Ryan-1125/moonstatsd)
+[![Mooncakes](https://img.shields.io/badge/Mooncakes-0.2.0-blue)](https://mooncakes.io/docs/Ryan-1125/moonstatsd)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 **MoonBit 原生 StatsD / DogStatsD 协议核心与异步 UDP 指标上报客户端。**
@@ -14,7 +14,7 @@
 moon add Ryan-1125/moonstatsd
 ```
 
-当前发布版本为 **0.1.0**，使用 Apache-2.0 许可证。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.20.0`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
+当前发布版本为 **0.2.0**，使用 Apache-2.0 许可证。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.20.0`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
 
 [Mooncakes 包与文档](https://mooncakes.io/docs/Ryan-1125/moonstatsd) · [版本记录](CHANGELOG.md) · [验证结果](docs/STATUS.md)
 
@@ -102,6 +102,18 @@ fn main raise {
 - **UTF-8 字节预算：**默认数据报上限 512 字节，支持配置为 `1..65507`；应结合采集器限制与路径 MTU 选择。
 - **名称与数值约定：**`prefix` 原样拼接，请自行包含末尾的 `.`；数值使用有限 IEEE-754 Double。避免用户 ID、完整 URL 等高基数标签。
 
+## 子客户端、耗时记录与错误通知
+
+`client.scope(prefix="jobs.", tags=["team:worker"])` 创建轻量子客户端，可继续嵌套。它复用原客户端的发送任务、队列容量和生命周期；前缀原样追加，标签按创建时快照保存，重复键会报错。子客户端不持有独立套接字，也不独立关闭发送器。
+
+`client.start_timer("duration")` 或 `scope.start_timer("duration")` 返回一次性 `Stopwatch`。在业务操作完成后显式调用 `timer.stop()`，以毫秒上报 Timer，并返回 `Enqueued` 或 `SampledOut`。首次 stop 尝试即消耗计时器，包含队列满、已关闭等失败；重复调用报 `TimerStopped`。取消或业务失败时由调用方决定是否记录，不会自动吞掉业务错误。
+
+默认时钟为 SDK `env.now()`（epoch 毫秒）；检测到时钟倒退会报错。需要单调时钟或确定测试时，可传入 `clock=() => ...`，返回 UInt64 毫秒。
+
+`with_client(..., on_error=event => ...)` 可接收异步本机发送失败通知。`SendFailure` 提供错误文本、数据报字节数、影响的指标数和已更新的统计快照；回调在发送任务中同步执行，应保持简短、不阻塞、不抛错。队列满和编码错误仍由 `record` 同步抛出。通知不触发自动重试。
+
+运行完整的自包含示例：`moon run cmd/diagnostics --target native`。示例结合子客户端、计时器、队列满处理、错误通知及真实本机 UDP 接收，源码见 [cmd/diagnostics](cmd/diagnostics/main.mbt)。
+
 ## 有界缓冲与生命周期
 
 默认容量 **256 条**、刷新间隔 **100 ms**、发送及 flush/close 时限 **1000 ms**。单一发送任务管理 UDP 套接字，容量包括发送中的记录。配置限制容量最多 65536 条，容量乘数据报上限不超过 16 MiB 的 wire 缓冲预算。
@@ -125,14 +137,14 @@ fn main raise {
 
 | 验证对象 | 覆盖内容 |
 | --- | --- |
-| native：20 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
+| native：25 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
 | 纯核心 wasm-gc：6 项通过 | 编码、校验、采样和打包 |
 | StatsD 0.9.0 | counter 采样放大、gauge 相对变化、timer、set 去重 |
 | statsd_exporter 0.28.0 | counter、gauge、timer、histogram、distribution 与标签 |
 | 官方 DogStatsD Agent 7.60.0 | counter、非负 gauge、timer、histogram、set 与标签的真实聚合输出 |
 | datadog-go 5.8.3 | 六种共同指标的 wire 语义差分 |
 | 独立 ZIP 消费与包审计 | 解压包独立编译、真实 UDP、包内资源检查 |
-| Mooncakes 0.1.0 独立消费 | registry 依赖解析、编码与打包、真实 DogStatsD UDP 收发 |
+| Mooncakes 0.2.0 独立消费 | registry 依赖解析、编码与打包、真实 DogStatsD UDP 收发 |
 | Windows / Ubuntu CI | 构建、测试、采集器互操作与独立消费 |
 
 Agent 验证使用固定摘要的官方 Linux amd64 镜像；distribution 的覆盖来自 exporter 与 wire 差分。平台与兼容性声明以实测范围为准；本项目不作吞吐性能或商业 Datadog 后端兼容性保证。
@@ -149,9 +161,10 @@ node tools/test-reference.mjs
 ./tools/test-registry-consumer.ps1
 ./tools/test-readme.ps1
 ./tools/audit-package.ps1
+./tools/prepare-release.ps1
 ```
 
-CI 还会从 Mooncakes 安装 0.1.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
+CI 还会从 Mooncakes 安装 0.2.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
 
 ZIP 消费与包审计脚本自动读取 `moon.mod` 的模块名和版本号，升级版本后无需手动修改归档路径。已有 registry 缓存时，可为 `test-readme.ps1` 和 `test-consumer.ps1` 加 `-SkipUpdate` 跳过索引刷新；默认流程仍检查在线依赖解析。
 
@@ -165,6 +178,7 @@ node tools/test-agent.mjs
 
 - [使用细节与生命周期约定](docs/USAGE.md)
 - [发布与验证概览](docs/STATUS.md)
+- [版本发布与包安全验收](docs/RELEASING.md)
 - [实测命令与结果记录](docs/VALIDATION.md)
 - [协议来源与生态调研](docs/SOURCES.md)
 - [纯核心 API](pkg.generated.mbti) / [异步客户端 API](client/pkg.generated.mbti)

@@ -1,4 +1,4 @@
-param()
+param([switch]$SkipUpdate)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $app = Join-Path $projectRoot ('.local/registry-consumer-' + [guid]::NewGuid().ToString('N'))
@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Force $app | Out-Null
 @'
 name = "local/moonstatsd-registry-check"
 preferred_target = "native"
-import { "Ryan-1125/moonstatsd@0.1.0", "moonbitlang/async@0.20.0" }
+import { "Ryan-1125/moonstatsd@0.2.0", "moonbitlang/async@0.20.0" }
 '@ | Set-Content (Join-Path $app 'moon.mod')
 @'
 import { "Ryan-1125/moonstatsd" @statsd, "Ryan-1125/moonstatsd/client", "moonbitlang/async", "moonbitlang/async/socket" }
@@ -33,14 +33,24 @@ async fn main {
     let (n, _) = receiver.recvfrom(buffer)
     assert_eq(Bytes::from_array(buffer[:n].to_owned()),
       b"service.requests:1|c|#env:dev,route:home\nservice.latency:12.5|ms|#env:dev\nservice.queue:7|g|#env:dev")
+    let jobs = client.scope(prefix="jobs.", tags=["team:worker"])
+    let mut now = 10UL
+    let timer = jobs.start_timer("duration", clock=() => now)
+    now = 15UL
+    ignore(timer.stop())
+    assert_eq(client.flush().submitted, 4L)
+    let (n, _) = receiver.recvfrom(buffer)
+    assert_eq(Bytes::from_array(buffer[:n].to_owned()), b"service.jobs.duration:5|ms|#env:dev,team:worker")
   }, mode=DogStatsD, prefix="service.", fixed_tags=["env:dev"]))
-  println("Registry 0.1.0 consumer: codec, packing and real DogStatsD UDP passed")
+  println("Registry 0.2.0 consumer: codec, packing, scopes, timers and real DogStatsD UDP passed")
 }
 '@ | Set-Content (Join-Path $app 'main.mbt')
 Push-Location $app
 try {
-  & moon update
-  if ($LASTEXITCODE -ne 0) { throw 'registry update failed' }
+  if (-not $SkipUpdate) {
+    & moon update
+    if ($LASTEXITCODE -ne 0) { throw 'registry update failed' }
+  }
   & moon run . --target native
   if ($LASTEXITCODE -ne 0) { throw 'registry consumer failed' }
   Write-Output "Registry consumer sources: $app"

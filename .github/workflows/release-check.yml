@@ -1,0 +1,47 @@
+name: Release acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact version from moon.mod
+        required: true
+        type: string
+      published:
+        description: Also verify the published registry package
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Check requested version and prepare archive
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          . ./tools/module-metadata.ps1
+          $module = Get-ModuleMetadata -ProjectRoot $PWD
+          if ($module.Version -ne $env:REQUESTED_VERSION) { throw 'Requested version differs from checkout' }
+          ./tools/prepare-release.ps1
+      - name: Verify published installation and examples
+        if: inputs.published
+        shell: pwsh
+        run: |
+          ./tools/test-registry-consumer.ps1
+          ./tools/test-readme.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-evidence
+          path: .local/evidence
+          include-hidden-files: true

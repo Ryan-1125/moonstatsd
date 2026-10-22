@@ -394,3 +394,33 @@ Actual ZIP audit passed: 44 entries, no private/build artifacts.
 最初副本位于 .local 下，父目录忽略规则导致归档为空，审计正确拒绝缺失源码；临时移至工作区非隐藏目录后真实生成并审计 0.1.1 包，完成后移回 .local。主项目版本仍为 0.1.0，没有发布新版本。日志：`.local/evidence/version-consumer.log`、`.local/evidence/version-next-package.log`。
 
 最终回归：`moon info --target native`、`moon fmt`、`git diff --check` 通过，公开接口无变化；native 20/20、纯核心 wasm-gc 6/6；主项目实际 0.1.0 ZIP 审计通过，44 个条目。两项新增脚本和验证记录均进入包，个人申报材料继续排除。
+
+## 2026-10-22：0.2.0 业务辅助与发布安全
+
+新增 Scope（共享 owner 队列/发送任务/关闭状态）、一次性 Stopwatch（UInt64 毫秒时钟可注入、回拨报错、失败 stop 也消费）、SendFailure（统计完成后同步通知，不做重试），以及 cmd/diagnostics 自包含真实 UDP 示例。
+
+实际读取 async@0.20.0 源码确认 async.now 已弃用；SDK core/env.now 的公开文档声明 epoch 毫秒，故 API 文档没有将默认时钟宣称为单调时钟。
+
+实测：
+
+```text
+moon test --target native
+Total tests: 25, passed: 25, failed: 0.
+moon test --target wasm-gc --package Ryan-1125/moonstatsd
+Total tests: 6, passed: 6, failed: 0.
+moon run cmd/diagnostics --target native
+queue full: newest metric rejected
+real UDP received bytes=64
+submitted=2, queue_full=1, dropped=0
+node tools/test-interop.mjs
+statsd_exporter v0.28.0: 12 collector assertions passed
+StatsD v0.9.0: sampled counter=4, gauge=7, timer=250ms, unique set=2
+node tools/test-reference.mjs
+ datadog-go v5.8.3: 6 wire cases semantically equal (timer decimal formatting normalized)
+```
+
+参考差分首次因为当前终端无 go 而 ENOENT；按照既有记录设置 GO_EXE 指向已下载 Go 1.23.2 后通过，缓存写在本项目 .local 内，没有修改其他仓库。
+
+发布安全：.moonignore 默认拒绝、逐文件放行；tools/package-files.txt 独立核对实际 ZIP 的缺失与意外条目。实际在 client 下创建一个无敏感内容的随机 canary 文本，打包审计通过且 canary 被排除，随后删除该测试文件；0.2.0 ZIP 共 52 条目。
+
+`./tools/prepare-release.ps1 -SkipUpdate` 已执行格式/check/build/native/wasm-gc/ZIP审计/独立消费全流程并产出 release.json（版本、SDK、SHA256）。缓存模式跳过索引刷新，独立 ZIP 应用的真实 UDP 收发仍然执行。本轮日志位于 .local/evidence/v020-*.log；发布后 registry 与 GitHub CI 证据追加在下文。

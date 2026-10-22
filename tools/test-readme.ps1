@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force $app | Out-Null
 @'
 name = "local/moonstatsd-readme"
 preferred_target = "native"
-import { "Ryan-1125/moonstatsd@0.1.0", "moonbitlang/async@0.20.0" }
+import { "Ryan-1125/moonstatsd@0.2.0", "moonbitlang/async@0.20.0" }
 '@ | Set-Content (Join-Path $app 'moon.mod')
 for ($index = 0; $index -lt 2; $index++) {
   $example = Join-Path $app "example$index"

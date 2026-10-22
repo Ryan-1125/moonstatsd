@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 — 2026-10-22
+
+- Add nested scoped clients sharing the owner's bounded queue, sender and lifetime, with snapshot tags and validated prefixes.
+- Add one-shot elapsed Timer helpers with injectable UInt64 millisecond clocks and explicit backwards-clock rejection.
+- Add optional synchronous SendFailure notifications after local accounting is committed, without implicit retry.
+- Add a self-contained real-UDP diagnostic example and regressions for scopes, timers, queue saturation and failure callbacks.
+- Replace package filtering with an exact file allowlist and audit both missing and unexpected ZIP entries.
+- Add versioned release preflight with archive SHA256 and a manual GitHub Release acceptance workflow.
+
 ## 0.1.0 — 2026-10-21
 
 - Add native MoonBit StatsD/DogStatsD codec with explicit gauge delta and safe rejection of negative absolute gauges.

@@ -1,5 +1,7 @@
 # MoonStatsD 使用与行为约定
 
+0.2.0 的子客户端、耗时工具和发送错误通知见 [README](../README.md#子客户端耗时记录与错误通知)，完整可运行示例为 [cmd/diagnostics](../cmd/diagnostics/main.mbt)。以下约定继续适用于共享同一发送器的所有 Scope。
+
 ## 支持范围
 
 | 能力 | 基础 StatsD | DogStatsD | 已做的真实验证 |

@@ -1,6 +1,6 @@
 # 发布与验证概览
 
-更新日期：2026-10-21。历史命令、失败与修复细节保留在 VALIDATION.md。
+更新日期：2026-10-22。当前版本 0.2.0；历史命令、失败与修复细节保留在 VALIDATION.md。
 
 ## 已实现
 
@@ -10,11 +10,15 @@
 - flush 入队快照屏障、限时 close、本地计数与最近发送错误诊断。
 - 显式拒绝负绝对 gauge；相对 gauge 仅在基础 StatsD 模式提供。
 
+- 共享队列和生命周期的嵌套 Scope、标签快照、一次性耗时计时器。
+- 统计更新后触发的 SendFailure 通知与自包含真实 UDP 排障示例。
+- 精确发布文件白名单、版本化发布验收、包 SHA256 和手动 GitHub 发布验收工作流。
+
 ## 当前验证
 
 | 项目 | 已有证据 |
 |---|---|
-| 本地 native | 20 组通过；包含持续生产竞争、标签快照及构造期配置预算 |
+| 本地 native | 25 组通过；包含 Scope、计时器、发送失败回调及已有竞争/取消测试 |
 | 纯核心 wasm-gc | 6 组通过 |
 | StatsD 0.9.0 | 实际 counter/gauge/timer/set 聚合与采样验证 |
 | statsd_exporter 0.28.0 | 实际 counter/gauge/timer/histogram/distribution 和标签验证 |
@@ -24,7 +28,7 @@
 | Windows / Ubuntu CI | a547b5b 两个平台全流程成功，native 20/20、核心 wasm-gc 6/6 |
 | 官方 DogStatsD Agent 7.60.0 | Ubuntu CI 真实通过：采样计数、gauge、timer、histogram、set 与标签 |
 
-本轮通过的运行：[39542103570](https://github.com/Ryan-1125/moonstatsd/actions/runs/39542103570)。
+既有 0.1.x 通过的运行：[39542103570](https://github.com/Ryan-1125/moonstatsd/actions/runs/39542103570)。
 官方二进制报告 7.60.0 / commit 799e298。其真实输出中 counter 为 rate=0.4、
 interval=10（折算计数 4），gauge=7、timer.avg=250、histogram.avg=42、set=2。
 
