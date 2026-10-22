@@ -424,3 +424,27 @@ node tools/test-reference.mjs
 发布安全：.moonignore 默认拒绝、逐文件放行；tools/package-files.txt 独立核对实际 ZIP 的缺失与意外条目。实际在 client 下创建一个无敏感内容的随机 canary 文本，打包审计通过且 canary 被排除，随后删除该测试文件；0.2.0 ZIP 共 52 条目。
 
 `./tools/prepare-release.ps1 -SkipUpdate` 已执行格式/check/build/native/wasm-gc/ZIP审计/独立消费全流程并产出 release.json（版本、SDK、SHA256）。缓存模式跳过索引刷新，独立 ZIP 应用的真实 UDP 收发仍然执行。本轮日志位于 .local/evidence/v020-*.log；发布后 registry 与 GitHub CI 证据追加在下文。
+
+### 0.2.0 发布完成与线上消费
+
+发布源提交：4cd3233064cded88815541de687940c3ebc9be8a（工作区干净）。Windows 与 Ubuntu 全流程 CI 均成功：
+https://github.com/Ryan-1125/moonstatsd/actions/runs/39752871571
+
+```text
+moon publish
+Server status: 200 OK
+./tools/test-registry-consumer.ps1
+Registry index updated successfully
+Symbols updated successfully
+Registry 0.2.0 consumer: codec, packing, scopes, timers and real DogStatsD UDP passed
+./tools/test-readme.ps1 -SkipUpdate
+Using cached Ryan-1125/moonstatsd@0.2.0
+local submitted=3, send errors=0
+README examples passed: published dependency, exact source, compile and run (UDP output is local submission only).
+```
+
+实际上传 0.2.0 ZIP SHA256：
+`8a1139ec7be3aa92afb803c9b9d02add772b78e7e2ff0bae17ad3329f3cf379b`
+与上传前 release.json 相同。发布后 registry 测试下载真实 0.2.0，不使用源码覆盖；同时断言 Scope 计时器的 5ms wire、累计提交计数及接收字节。
+
+日志：.local/evidence/v020-publish.log、v020-registry.log、v020-readme.log、v020-preflight-release.log。版本标签 v0.2.0 指向上述实际发布快照，后续文档提交只补充验证证据，不声称改写已有 registry 归档。
