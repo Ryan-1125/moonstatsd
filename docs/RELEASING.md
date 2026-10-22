@@ -21,6 +21,8 @@
 
 `Release acceptance` 工作流可手动触发：填写与 checkout 中 moon.mod 一致的版本；发布后勾选 published，额外执行实际 registry 消费与 README 示例测试。工作流保存版本、哈希和测试日志作为 artifact。普通 Verify 工作流继续覆盖 Windows、Ubuntu、真实采集器、参考客户端与官方 Agent。
 
+普通分支 CI 使用当前源码和实际 ZIP 验证；registry 检查只在发布后的 tag CI 或上述手动工作流执行，避免待发布版本尚未进入 registry 时形成循环依赖。
+
 ## 运行排障
 
 - `QueueFull`：说明本机缓冲已满。检查 `queue_full`，调整容量/刷新间隔、降低上报频率或采样，不应无限循环重试。

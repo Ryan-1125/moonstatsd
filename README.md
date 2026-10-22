@@ -164,7 +164,7 @@ node tools/test-reference.mjs
 ./tools/prepare-release.ps1
 ```
 
-CI 还会从 Mooncakes 安装 0.2.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
+发布后的 tag CI 或 Release acceptance 工作流还会从 Mooncakes 安装 0.2.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
 
 ZIP 消费与包审计脚本自动读取 `moon.mod` 的模块名和版本号，升级版本后无需手动修改归档路径。已有 registry 缓存时，可为 `test-readme.ps1` 和 `test-consumer.ps1` 加 `-SkipUpdate` 跳过索引刷新；默认流程仍检查在线依赖解析。
 
