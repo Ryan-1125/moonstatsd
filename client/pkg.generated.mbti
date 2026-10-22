@@ -8,13 +8,14 @@ import {
 }
 
 // Values
-pub async fn[T] with_client(@socket.Addr, async (Client) -> T, mode? : @moonstatsd.Mode, prefix? : String, fixed_tags? : Array[String], capacity? : Int32, max_bytes? : Int32, interval_ms? : Int32, timeout_ms? : Int32, random? : () -> Double) -> T
+pub async fn[T] with_client(@socket.Addr, async (Client) -> T, mode? : @moonstatsd.Mode, prefix? : String, fixed_tags? : Array[String], capacity? : Int32, max_bytes? : Int32, interval_ms? : Int32, timeout_ms? : Int32, random? : () -> Double, on_error? : (SendFailure) -> Unit) -> T
 
 // Errors
 pub(all) suberror ClientError {
   Closed
   QueueFull
   InvalidConfig(String)
+  TimerStopped
 } derive(@debug.Debug)
 pub fn ClientError::to_repr(Self) -> @debug.Repr
 
@@ -33,7 +34,23 @@ pub struct Client {
 pub async fn Client::close(Self, timeout_ms? : Int32) -> Stats
 pub async fn Client::flush(Self, timeout_ms? : Int32) -> Stats
 pub fn Client::record(Self, String, @moonstatsd.Metric, tags? : Array[String], rate? : Double) -> Admission raise
+pub fn Client::scope(Self, prefix? : String, tags? : Array[String]) -> Scope raise
+pub fn Client::start_timer(Self, String, tags? : Array[String], rate? : Double, clock? : () -> UInt64) -> Stopwatch raise
 pub fn Client::stats(Self) -> Stats
+
+pub struct Scope {
+  // private fields
+}
+pub fn Scope::record(Self, String, @moonstatsd.Metric, tags? : Array[String], rate? : Double) -> Admission raise
+pub fn Scope::scope(Self, prefix? : String, tags? : Array[String]) -> Self raise
+pub fn Scope::start_timer(Self, String, tags? : Array[String], rate? : Double, clock? : () -> UInt64) -> Stopwatch raise
+
+pub struct SendFailure {
+  message : String
+  metrics : Int64
+  bytes : Int32
+  stats : Stats
+}
 
 pub struct Stats {
   enqueued : Int64
@@ -47,6 +64,11 @@ pub struct Stats {
   closed : Bool
 } derive(@debug.Debug)
 pub fn Stats::to_repr(Self) -> @debug.Repr
+
+pub struct Stopwatch {
+  // private fields
+}
+pub fn Stopwatch::stop(Self) -> Admission raise
 
 // Type aliases
 

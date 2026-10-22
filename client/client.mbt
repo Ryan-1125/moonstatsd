@@ -3,6 +3,7 @@ pub(all) suberror ClientError {
   Closed
   QueueFull
   InvalidConfig(String)
+  TimerStopped
 } derive(Debug)
 
 ///|
@@ -48,6 +49,7 @@ pub struct Client {
   priv interval_ms : Int32
   priv timeout_ms : Int32
   priv draw : () -> Double
+  priv on_error : ((SendFailure) -> Unit)?
   priv queue : @deque.Deque[@codec.Message]
   priv wake : @async.CondVar
   priv changed : @async.CondVar
@@ -89,6 +91,19 @@ pub fn Client::record(
   tags~ : Array[String] = [],
   rate~ : Double = 1.0,
 ) -> Admission raise {
+  self.record_with(name, metric, self.prefix, self.tags, tags~, rate~)
+}
+
+///|
+fn Client::record_with(
+  self : Client,
+  name : String,
+  metric : @codec.Metric,
+  prefix : String,
+  fixed_tags : Array[String],
+  tags~ : Array[String],
+  rate~ : Double,
+) -> Admission raise {
   if self.state != 0 {
     raise Closed
   }
@@ -96,8 +111,8 @@ pub fn Client::record(
     name,
     metric,
     mode=self.mode,
-    prefix=self.prefix,
-    fixed_tags=self.tags,
+    prefix~,
+    fixed_tags~,
     tags~,
     rate~,
     max_bytes=self.max_bytes,
@@ -183,6 +198,7 @@ async fn Client::send_loop(self : Client, socket : @socket.UdpClient) -> Unit {
     while self.queue.pop_front() is Some(first) {
       let mut bytes = first.bytes()
       let mut count = 1L
+      let mut failure : String? = None
       while self.queue.front() is Some(next) &&
             bytes.length() + 1 + next.bytes().length() <= self.max_bytes {
         ignore(self.queue.pop_front())
@@ -199,11 +215,21 @@ async fn Client::send_loop(self : Client, socket : @socket.UdpClient) -> Unit {
           }
           self.send_errors += 1
           self.last_send_error = Some(err.to_string())
+          failure = self.last_send_error
           self.dropped += count
         }
       }
       self.done += count
       self.changed.broadcast()
+      // Commit counters before notifying so callbacks observe consistent state.
+      if failure is Some(message) && self.on_error is Some(notify) {
+        notify({
+          message,
+          metrics: count,
+          bytes: bytes.length(),
+          stats: self.stats(),
+        })
+      }
       // Yield even if the platform send completed synchronously, to avoid starvation.
       @async.pause()
     }
@@ -229,6 +255,7 @@ pub async fn[T] with_client(
   interval_ms~ : Int32 = 100,
   timeout_ms~ : Int32 = 1000,
   random? : () -> Double,
+  on_error? : (SendFailure) -> Unit,
 ) -> T {
   if capacity < 1 || capacity > 65536 {
     raise InvalidConfig("capacity must be in 1..65536")
@@ -274,6 +301,7 @@ pub async fn[T] with_client(
     interval_ms,
     timeout_ms,
     draw,
+    on_error,
     queue: @deque.Deque([]),
     wake: @cond.Cond(),
     changed: @cond.Cond(),

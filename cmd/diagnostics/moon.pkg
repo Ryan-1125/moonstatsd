@@ -1,0 +1,7 @@
+import {
+  "Ryan-1125/moonstatsd/client",
+  "moonbitlang/async",
+  "moonbitlang/async/socket",
+}
+
+pkgtype(kind: "executable")
