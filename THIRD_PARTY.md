@@ -11,8 +11,8 @@ test process. No implementation text is copied into the MoonBit library.
 
 | Component | Fixed version | License / role |
 |---|---|---|
-| moonbitlang/async | 0.20.0 | Apache-2.0; actual library dependency, source/API inspected |
-| moonbitlang/core | SDK v0.10.16+b1a0e846e | Apache-2.0; SDK dependency |
+| moonbitlang/async | 0.22.10 | Apache-2.0; actual library dependency, source/API inspected |
+| moonbitlang/core | SDK v0.10.22+124d61d05 | Apache-2.0; SDK dependency |
 | DataDog/documentation | 41384078b8ba37e2cd12e825584ffa8cd66703f7 | BSD-3-Clause; official protocol text read, no document text copied |
 | statsd/statsd | v0.9.0 | MIT; protocol reference and external test receiver |
 | DataDog/datadog-go | v5.8.3 | MIT; behavior reference and separate Go differential executable |

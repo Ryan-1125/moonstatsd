@@ -37,6 +37,7 @@ async test "aggregate backpressure is atomic and retryable" {
     server.addr,
     c => {
       let window = @codec.AggregateBuffer::new()
+      ignore(c.record("existing", Counter(1.0)))
       window.record("a", Counter(1.0))
       window.record("b", Counter(2.0))
       assert_true(
@@ -49,9 +50,13 @@ async test "aggregate backpressure is atomic and retryable" {
         },
       )
       assert_eq(window.length(), 2)
-      assert_eq(c.stats().enqueued, 0L)
+      assert_eq(c.stats().enqueued, 1L)
+      ignore(c.flush())
+      assert_eq(c.submit_aggregate(window), 2)
+      assert_eq(window.length(), 0)
+      assert_eq(c.flush().submitted, 3L)
     },
     mode=DogStatsD,
-    capacity=1,
+    capacity=2,
   )
 }

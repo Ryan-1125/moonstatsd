@@ -21,7 +21,7 @@
 ## 使用
 
 通过 `moon add Ryan-1125/moonstatsd` 安装 0.1.0。`tools/test-consumer.ps1` 另提供实际打包 ZIP 的独立消费验证。
-库项目依赖固定为 `moonbitlang/async@0.20.0`，native 目标。应用的 `moon.pkg` 导入：
+库项目依赖固定为 `moonbitlang/async@0.22.10`，native 目标。应用的 `moon.pkg` 导入：
 
 ```moonbit
 import {

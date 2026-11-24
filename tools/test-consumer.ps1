@@ -17,7 +17,7 @@ try {
   $consumerManifest = @'
 name = "local/moonstatsd-consumer"
 preferred_target = "native"
-import { "__MODULE__@__VERSION__", "moonbitlang/async@0.20.0" }
+import { "__MODULE__@__VERSION__", "moonbitlang/async@0.22.10" }
 '@
   $consumerManifest.Replace('__MODULE__', $module.Name).Replace('__VERSION__', $module.Version) | Set-Content (Join-Path $app 'moon.mod')
   $consumerPackage = @'

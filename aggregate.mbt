@@ -63,6 +63,8 @@ pub fn AggregateBuffer::record(
     Distribution(_) => ("d", "")
     _ => ("observation", "")
   }
+  let canonical_tags = tags.copy()
+  canonical_tags.sort()
   let key = kind +
     ":" +
     identity +
@@ -72,7 +74,7 @@ pub fn AggregateBuffer::record(
         name,
         Counter(0.0),
         mode=DogStatsD,
-        tags~,
+        tags=canonical_tags,
         max_bytes=self.max_bytes,
       ).bytes(),
     ) catch {

@@ -1,7 +1,7 @@
 # MoonStatsD
 
 [![Verify](https://github.com/Ryan-1125/moonstatsd/actions/workflows/ci.yml/badge.svg)](https://github.com/Ryan-1125/moonstatsd/actions/workflows/ci.yml)
-[![Mooncakes](https://img.shields.io/badge/Mooncakes-0.2.0-blue)](https://mooncakes.io/docs/Ryan-1125/moonstatsd)
+[![Mooncakes](https://img.shields.io/badge/Mooncakes-0.3.0-blue)](https://mooncakes.io/docs/Ryan-1125/moonstatsd)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 **MoonBit 原生 StatsD / DogStatsD 协议核心与异步 UDP 指标上报客户端。**
@@ -14,7 +14,7 @@
 moon add Ryan-1125/moonstatsd
 ```
 
-当前发布版本为 **0.2.0**，使用 Apache-2.0 许可证。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.20.0`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
+当前扩展版本为 **0.3.0**，使用 Apache-2.0 许可证。本版本使用已实测 SDK **moonc v0.10.22 / moon 0.1.20261119**。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.22.10`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
 
 [Mooncakes 包与文档](https://mooncakes.io/docs/Ryan-1125/moonstatsd) · [版本记录](CHANGELOG.md) · [验证结果](docs/STATUS.md)
 
@@ -23,7 +23,7 @@ moon add Ryan-1125/moonstatsd
 应用直接使用异步运行时时，显式添加依赖：
 
 ```sh
-moon add moonbitlang/async@0.20.0
+moon add moonbitlang/async@0.22.10
 ```
 
 在可执行包的 `moon.pkg` 中导入：
@@ -31,7 +31,6 @@ moon add moonbitlang/async@0.20.0
 ```moonbit
 import {
   "Ryan-1125/moonstatsd/client",
-  "moonbitlang/async",
   "moonbitlang/async/socket",
 }
 pkgtype(kind: "executable")
@@ -146,8 +145,8 @@ fn main raise {
 
 | 验证对象 | 覆盖内容 |
 | --- | --- |
-| native：32 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
-| 纯核心 wasm-gc：11 项通过 | 编码、校验、采样和打包 |
+| native：33 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
+| 纯核心 wasm-gc：12 项通过 | 编码、校验、采样和打包 |
 | StatsD 0.9.0 | counter 采样放大、gauge 相对变化、timer、set 去重 |
 | statsd_exporter 0.28.0 | counter、gauge、timer、histogram、distribution 与标签 |
 | 官方 DogStatsD Agent 7.60.0 | counter、非负 gauge、timer、histogram、set 与标签的真实聚合输出 |

@@ -1,19 +1,21 @@
 ///|
+#derive(Debug)
 pub(all) suberror ClientError {
   Closed
   QueueFull
   InvalidConfig(String)
   TimerStopped
-} derive(Debug)
+}
 
 ///|
 pub extend ClientError with @debug.Debug::{to_repr}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum Admission {
   Enqueued
   SampledOut
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Admission with Eq::{equal, not_equal}
@@ -23,6 +25,7 @@ pub extend Admission with @debug.Debug::{to_repr}
 
 ///|
 /// Cumulative local observations, never a collector delivery acknowledgement.
+#derive(Debug)
 pub struct Stats {
   enqueued : Int64
   sampled_out : Int64
@@ -33,7 +36,7 @@ pub struct Stats {
   dropped : Int64
   pending : Int64
   closed : Bool
-} derive(Debug)
+}
 
 ///|
 pub extend Stats with @debug.Debug::{to_repr}
@@ -262,6 +265,11 @@ pub fn Client::submit_aggregate(
     fixed_tags=self.tags,
     max_bytes=self.max_bytes,
   )
+  if messages.length() > self.capacity {
+    raise InvalidConfig(
+      "aggregate output exceeds client capacity; use a smaller window",
+    )
+  }
   if messages.length().to_int64() >
     self.capacity.to_int64() - (self.accepted - self.done) {
     self.queue_full += 1
@@ -351,9 +359,6 @@ async fn Client::send_loop(self : Client, socket : @socket.UdpClient) -> Unit {
         self.submitted += count
       } catch {
         err => {
-          if @async.is_cancellation_error(err) {
-            raise err
-          }
           self.send_errors += 1
           self.last_send_error = Some(err.to_string())
           failure = self.last_send_error

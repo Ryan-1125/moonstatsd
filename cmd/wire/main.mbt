@@ -25,7 +25,7 @@ fn main raise {
     @utf8.decode(
       @codec.encode_event(
         "发布",
-        "line1\nline2",
+        "line1|ok\nline2",
         timestamp=1700000000L,
         hostname="node",
         aggregation_key="deploy",

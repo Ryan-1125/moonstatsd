@@ -2,6 +2,8 @@
 
 ## 0.3.0 — 2026-11-24
 
+- Migrate to the tested November SDK and async 0.22.10, including modern derive syntax and cancellation behavior.
+
 - Add typed DogStatsD Events and Service Checks, UTF-8 length framing, metadata and escaping.
 - Add Client and Scope async queue admission for events, checks and numeric v1.1 value packing.
 - Add bounded explicit aggregation windows: counter sums, last gauges, set deduplication and lossless observation packing.

@@ -1,6 +1,5 @@
 import {
   "Ryan-1125/moonstatsd/client",
-  "moonbitlang/async",
   "moonbitlang/async/socket",
   "moonbitlang/core/env",
 }

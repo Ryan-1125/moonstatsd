@@ -143,3 +143,13 @@ test "aggregate mixed observation types splitting overflow and tag snapshot" {
   assert_eq(other.length(), 1)
   assert_eq(other.messages()[0].bytes(), b"x:1e+308|c|#env:before")
 }
+
+///|
+test "aggregate tag order is semantic identity and last gauge survives" {
+  let window = @moonstatsd.AggregateBuffer::new()
+  window.record("g", Gauge(1.0), tags=["a:1", "b:2"])
+  window.record("g", Gauge(2.0), tags=["b:2", "a:1"])
+  window.record("g", Gauge(3.0), tags=["a:1", "b:2"])
+  assert_eq(window.length(), 1)
+  assert_eq(window.messages()[0].bytes(), b"g:3|g|#a:1,b:2")
+}

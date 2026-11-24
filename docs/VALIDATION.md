@@ -470,3 +470,20 @@ Actual ZIP audit passed: 58 entries, no private/build artifacts.
 测试覆盖事件长度和正文管道符、四种检查状态、注入和控制字符、字段顺序、多值混合类型/Set/超限拒绝、分布观测不求平均、窗口溢出保护、标签快照、精确字节拆包、窗口满队列原子保留和真实 UDP 收发。聚合为显式有界窗口，submit_aggregate 成功后才清空；不将未提交窗口冒充已发送数据。
 
 新增官方 Agent 测试在既有固定摘要 7.60.0 镜像中检查事件和检查转发 JSON、多值平均及 counter/gauge/set/histogram 聚合结果；本机无 Docker，只能在 Linux CI 实际执行，结果另行追加。保留原有未提交的 .gitignore 和 docs/STATUS.md 改动，没有将个人申报文件纳入提交或包。
+
+### SDK 迁移与聚合身份修正
+
+首次远端运行 45389299242 在 format 检查失败：CI 安装 moon 0.1.20261119 / moonc v0.10.22+124d61d05，将旧 derive 语法迁移为 #derive。本机在 .local/sdk-current 隔离安装同一官方 SDK，没有替换全局十月 SDK。随后实际发现 async 0.20.0 的 trait 方法在新 SDK 下编译失败；读取官方 registry 元数据并升级为固定 async 0.22.10（Apache-2.0），检查其 UDP、任务、CondVar、定时和取消接口。新 async 的取消不再被 catch 捕获，移除已弃用的 is_cancellation_error 调用；已有 scope/flush/close 取消回归全部通过。
+
+增加标签排序作为聚合身份，保证不同标签排列的 gauge 仍保留业务最后值。客户端容量永久不足时返回 InvalidConfig，临时背压仍为 QueueFull；窗口原子保留并可在 flush 后重试。
+
+```text
+SDK: moon 0.1.20261119 / moonc v0.10.22+124d61d05
+async: 0.22.10
+Total tests: 33, passed: 33, failed: 0.
+Total tests: 12, passed: 12, failed: 0.
+Independent published-ZIP consumer: codec, events, checks, multi-values, aggregation and real UDP passed
+Actual ZIP audit passed: 58 entries, no private/build artifacts.
+```
+
+新版 SDK 下参考客户端差分再次通过，并加入包含管道符和换行的事件正文。日志：expanded-current-sdk.log、expanded-current-preflight.log、expanded-current-reference.log；失败 job 完整日志：job-138428473008.log。新 SDK 与依赖均来自官方来源，未修改依赖源代码以规避错误。

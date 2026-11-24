@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Force $app | Out-Null
 @'
 name = "local/moonstatsd-registry-check"
 preferred_target = "native"
-import { "Ryan-1125/moonstatsd@0.2.0", "moonbitlang/async@0.20.0" }
+import { "Ryan-1125/moonstatsd@0.3.0", "moonbitlang/async@0.22.10" }
 '@ | Set-Content (Join-Path $app 'moon.mod')
 @'
 import { "Ryan-1125/moonstatsd" @statsd, "Ryan-1125/moonstatsd/client", "moonbitlang/async", "moonbitlang/async/socket" }
@@ -41,8 +41,18 @@ async fn main {
     assert_eq(client.flush().submitted, 4L)
     let (n, _) = receiver.recvfrom(buffer)
     assert_eq(Bytes::from_array(buffer[:n].to_owned()), b"service.jobs.duration:5|ms|#env:dev,team:worker")
+    ignore(client.event("deploy", "ok"))
+    ignore(client.service_check("health", Ok, message="ready"))
+    ignore(client.record_values("latency", [Timer(1.0), Timer(2.0)]))
+    let window = @statsd.AggregateBuffer::new()
+    window.record("agg", Counter(1.0))
+    window.record("agg", Counter(2.0))
+    assert_eq(client.submit_aggregate(window), 1)
+    assert_eq(client.flush().submitted, 8L)
+    let (n, _) = receiver.recvfrom(buffer)
+    assert_eq(Bytes::from_array(buffer[:n].to_owned()), b"_e{6,2}:deploy|ok|p:normal|t:info|#env:dev\n_sc|service.health|0|#env:dev|m:ready\nservice.latency:1:2|ms|#env:dev\nservice.agg:3|c|#env:dev")
   }, mode=DogStatsD, prefix="service.", fixed_tags=["env:dev"]))
-  println("Registry 0.2.0 consumer: codec, packing, scopes, timers and real DogStatsD UDP passed")
+  println("Registry 0.3.0 consumer: metrics, scopes, timers, events, checks, multi-values, aggregation and real UDP passed")
 }
 '@ | Set-Content (Join-Path $app 'main.mbt')
 Push-Location $app

@@ -11,19 +11,21 @@ import {
 pub async fn[T] with_client(@socket.Addr, async (Client) -> T, mode? : @moonstatsd.Mode, prefix? : String, fixed_tags? : Array[String], capacity? : Int32, max_bytes? : Int32, interval_ms? : Int32, timeout_ms? : Int32, random? : () -> Double, on_error? : (SendFailure) -> Unit) -> T
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror ClientError {
   Closed
   QueueFull
   InvalidConfig(String)
   TimerStopped
-} derive(@debug.Debug)
+}
 pub fn ClientError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Admission {
   Enqueued
   SampledOut
-} derive(Eq, @debug.Debug)
+}
 pub fn Admission::equal(Self, Self) -> Bool
 pub fn Admission::not_equal(Self, Self) -> Bool
 pub fn Admission::to_repr(Self) -> @debug.Repr
@@ -59,6 +61,7 @@ pub struct SendFailure {
   stats : Stats
 }
 
+#derive(@debug.Debug)
 pub struct Stats {
   enqueued : Int64
   sampled_out : Int64
@@ -69,7 +72,7 @@ pub struct Stats {
   dropped : Int64
   pending : Int64
   closed : Bool
-} derive(@debug.Debug)
+}
 pub fn Stats::to_repr(Self) -> @debug.Repr
 
 pub struct Stopwatch {

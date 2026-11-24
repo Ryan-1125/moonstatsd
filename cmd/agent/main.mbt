@@ -16,7 +16,7 @@ async fn main {
       ignore(
         c.event(
           "MoonStatsD expanded",
-          "deployed\nline2",
+          "deployed|ok\nline2",
           aggregation_key="release",
           alert=Success,
           hostname="moonstatsd-node",

@@ -1,10 +1,12 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum Mode {
   StatsD
   DogStatsD
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Debug)
 pub(all) enum Metric {
   Counter(Double)
   Gauge(Double)
@@ -13,13 +15,14 @@ pub(all) enum Metric {
   Set(String)
   Histogram(Double)
   Distribution(Double)
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub(all) suberror EncodeError {
   Invalid(String)
   TooLarge(Int32, Int32)
-} derive(Debug)
+}
 
 ///|
 /// Validated, indivisible wire message. Negative absolute gauges are rejected.

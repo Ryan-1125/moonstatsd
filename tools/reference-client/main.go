@@ -33,7 +33,7 @@ func main() {
 	check(c.Set("set", "abc", tags, 1))
 	check(c.Histogram("histogram", 4, tags, 1))
 	check(c.Distribution("distribution", 5, tags, 1))
-	check(c.Event(&statsd.Event{Title: "发布", Text: "line1\nline2", Timestamp: time.Unix(1700000000, 0), Hostname: "node", AggregationKey: "deploy", Priority: statsd.Normal, SourceTypeName: "ci", AlertType: statsd.Success, Tags: tags}))
+	check(c.Event(&statsd.Event{Title: "发布", Text: "line1|ok\nline2", Timestamp: time.Unix(1700000000, 0), Hostname: "node", AggregationKey: "deploy", Priority: statsd.Normal, SourceTypeName: "ci", AlertType: statsd.Success, Tags: tags}))
 	check(c.ServiceCheck(&statsd.ServiceCheck{Name: "svc.health", Status: statsd.Critical, Timestamp: time.Unix(1700000000, 0), Hostname: "node", Message: "line1\nm:ready", Tags: tags}))
 	check(c.Flush())
 	check(c.Close())
