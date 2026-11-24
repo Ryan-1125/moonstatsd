@@ -7,4 +7,5 @@ target
 .local/
 *.log
 /shenbao.md
+/docs/shenbao.md
 

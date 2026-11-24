@@ -493,3 +493,9 @@ Actual ZIP audit passed: 58 entries, no private/build artifacts.
 运行 45391113987：Windows 全流程成功；Ubuntu native 33/33、纯核心 12/12、StatsD/exporter 通过，但 Agent 验收等候超时。下载实际 evidence-ubuntu-latest artifact 14919945224 检查 forwarded.json，确认事件、多值及全部聚合指标已正确到达，只有测试对 service check message 的假设不符。
 
 真实 Agent 7.60.0 输出（摘要）：事件 msg_text 是含实际换行的 deployed|ok + line2；check=moonagent.health、status=2、message 为保留 wire 转义的 failure\\nm\\:ready；packed.avg=15、agg.count 的 rate=0.3/interval=10、agg.gauge=4、agg.set=1、agg.hist.avg=3，标签均存在。修正检查消息的断言为实际转发表示，未放宽 status、内容或标签要求，没有替换接收器，也没有修改库以伪造输出。完整失败证据仍在 .local/evidence/failed-agent。
+
+### 全部扩展的官方 Agent 验收通过
+
+e3fb522 对应运行 https://github.com/Ryan-1125/moonstatsd/actions/runs/45391820670 的 Windows 与 Ubuntu 全流程均成功。Ubuntu 执行了固定摘要官方 Agent 7.60.0 的事件、服务检查、多值与聚合输出断言，未跳过或改成 mock。Scope 也支持原子窗口提交并继承前缀、标签，相关真实 UDP 回归仍通过。
+
+保留早期失败运行与实际 artifact，修复依据和区别均已记录。新增 .gitignore 中 docs/shenbao.md 的排除规则来自之前已授权的文档移动，本轮一并保留提交；申报书本身不进入 Git 或发布包。

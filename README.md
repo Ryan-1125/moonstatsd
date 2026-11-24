@@ -149,10 +149,10 @@ fn main raise {
 | 纯核心 wasm-gc：12 项通过 | 编码、校验、采样和打包 |
 | StatsD 0.9.0 | counter 采样放大、gauge 相对变化、timer、set 去重 |
 | statsd_exporter 0.28.0 | counter、gauge、timer、histogram、distribution 与标签 |
-| 官方 DogStatsD Agent 7.60.0 | counter、非负 gauge、timer、histogram、set 与标签的真实聚合输出 |
+| 官方 DogStatsD Agent 7.60.0 | 原有指标、事件、服务检查、多值和聚合结果的实际转发输出 |
 | datadog-go 5.8.3 | 六种共同指标的 wire 语义差分 |
 | 独立 ZIP 消费与包审计 | 解压包独立编译、真实 UDP、包内资源检查 |
-| Mooncakes 0.2.0 独立消费 | registry 依赖解析、编码与打包、真实 DogStatsD UDP 收发 |
+| Mooncakes 独立消费 | registry 依赖解析、编码与打包、真实 DogStatsD UDP 收发 |
 | Windows / Ubuntu CI | 构建、测试、采集器互操作与独立消费 |
 
 Agent 验证使用固定摘要的官方 Linux amd64 镜像；distribution 的覆盖来自 exporter 与 wire 差分。平台与兼容性声明以实测范围为准；本项目不作吞吐性能或商业 Datadog 后端兼容性保证。
@@ -172,7 +172,7 @@ node tools/test-reference.mjs
 ./tools/prepare-release.ps1
 ```
 
-发布后的 tag CI 或 Release acceptance 工作流还会从 Mooncakes 安装 0.2.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
+发布后的 tag CI 或 Release acceptance 工作流还会从 Mooncakes 安装 0.3.0，并直接提取本页的两个 MoonBit 示例进行编译和运行，保证文档代码可用。UDP 示例检查本机提交结果，真实接收字节由独立消费测试断言。
 
 ZIP 消费与包审计脚本自动读取 `moon.mod` 的模块名和版本号，升级版本后无需手动修改归档路径。已有 registry 缓存时，可为 `test-readme.ps1` 和 `test-consumer.ps1` 加 `-SkipUpdate` 跳过索引刷新；默认流程仍检查在线依赖解析。
 

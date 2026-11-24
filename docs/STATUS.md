@@ -1,6 +1,9 @@
-# 发布与验证概览
+# MoonStatsD 0.3.0 项目交付概览
 
-更新日期：2026-10-22。当前版本 0.2.0；历史命令、失败与修复细节保留在 VALIDATION.md。
+更新日期：2026-11-24。当前版本 0.3.0；历史命令、失败与修复细节保留在 VALIDATION.md。
+
+**交付状态：0.3.0 已完成新增协议、聚合、异步客户端及双平台真实互操作验收。**
+项目包含可独立消费的协议库、native 异步 UDP 客户端、业务辅助 API、真实采集器互操作工具，以及可复现的版本验收流程。
 
 ## 已实现
 
@@ -18,14 +21,14 @@
 
 | 项目 | 已有证据 |
 |---|---|
-| 本地 native | 25 组通过；包含 Scope、计时器、发送失败回调及已有竞争/取消测试 |
-| 纯核心 wasm-gc | 6 组通过 |
+| 本地 native | 33 组通过；覆盖 Events、Checks、多值、聚合、Scope、计时器与竞争/取消 |
+| 纯核心 wasm-gc | 12 组通过 |
 | StatsD 0.9.0 | 实际 counter/gauge/timer/set 聚合与采样验证 |
 | statsd_exporter 0.28.0 | 实际 counter/gauge/timer/histogram/distribution 和标签验证 |
-| datadog-go 5.8.3 | 六种共同 wire 语义差分通过 |
+| datadog-go 5.8.3 | 六类指标及 Events/Checks UTF-8、转义、元数据差分通过 |
 | 独立消费 | 实际 ZIP 解压副本、独立应用编译与真实 UDP 通过 |
 | Mooncakes 0.2.0 消费 | 从 registry 解析依赖，编码、打包、Scope、计时器与真实 DogStatsD UDP 收发通过 |
-| Windows / Ubuntu CI | 4cd3233 两个平台全流程成功；包含官方 Agent 与参考客户端 |
+| Windows / Ubuntu CI | e3fb522 两个平台全流程成功；包含扩展官方 Agent 验收 |
 | 官方 DogStatsD Agent 7.60.0 | Ubuntu CI 真实通过：采样计数、gauge、timer、histogram、set 与标签 |
 
 既有 0.1.x 通过的运行：[39542103570](https://github.com/Ryan-1125/moonstatsd/actions/runs/39542103570)。
@@ -58,3 +61,13 @@ sink。该 sink 不解析 StatsD 输入，不是替代接收器。无需真实 A
 断言数据写入 .local/evidence/agent，并尝试在 finally 中清理容器及临时网络。
 
 0.2.0 源码验收：[39752871571](https://github.com/Ryan-1125/moonstatsd/actions/runs/39752871571)。发布后 registry 与 README 验证通过，实际上传归档 SHA256 与发布前记录一致。
+
+## 0.3.0 扩展验收
+
+- Events 与 Service Checks：纯编码、Client/Scope 有界异步发送、元数据、标签、字节长度和转义。
+- 多值：DogStatsD v1.1 数值类型打包、统一采样、类型和字节上限校验。
+- 聚合：counter 求和、gauge 最后值、set 去重、保留全部分布观测并打包；有界窗口、标签身份归一、原子提交与背压保留。
+- SDK：moon 0.1.20261119 / moonc v0.10.22+124d61d05；async 固定 0.22.10。全局旧 SDK 没有被替换。
+- 官方 Agent 7.60.0 实际转发事件和 check；packed timer.avg=15、agg counter=3、gauge=4、set=1、histogram.avg=3，标签验证通过。
+- 本轮完整成功记录：[45391820670](https://github.com/Ryan-1125/moonstatsd/actions/runs/45391820670)。
+- API、显式窗口生命周期与统计口径见 [DOGSTATSD.md](DOGSTATSD.md)。
