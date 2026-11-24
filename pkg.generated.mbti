@@ -8,6 +8,12 @@ import {
 // Values
 pub fn encode(String, Metric, mode? : Mode, prefix? : String, fixed_tags? : Array[String], tags? : Array[String], rate? : Double, max_bytes? : Int32) -> Message raise EncodeError
 
+pub fn encode_check(String, CheckStatus, timestamp? : Int64, hostname? : String, message? : String, tags? : Array[String], max_bytes? : Int32) -> Message raise EncodeError
+
+pub fn encode_event(String, String, timestamp? : Int64, hostname? : String, aggregation_key? : String, source_type? : String, priority? : EventPriority, alert? : AlertType, tags? : Array[String], max_bytes? : Int32) -> Message raise EncodeError
+
+pub fn encode_values(String, Array[Metric], prefix? : String, tags? : Array[String], rate? : Double, max_bytes? : Int32) -> Message raise EncodeError
+
 pub fn pack(Array[Message], max_bytes? : Int32, max_total_bytes? : Int32) -> Array[Bytes] raise EncodeError
 
 pub fn sampled(Double, Double) -> Bool raise EncodeError
@@ -20,6 +26,36 @@ pub(all) suberror EncodeError {
 pub fn EncodeError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub struct AggregateBuffer {
+  // private fields
+}
+pub fn AggregateBuffer::clear(Self) -> Unit
+pub fn AggregateBuffer::length(Self) -> Int32
+pub fn AggregateBuffer::messages(Self, prefix? : String, fixed_tags? : Array[String], max_bytes? : Int32) -> Array[Message] raise EncodeError
+pub fn AggregateBuffer::new(capacity? : Int32, max_bytes? : Int32) -> Self raise EncodeError
+pub fn AggregateBuffer::record(Self, String, Metric, tags? : Array[String]) -> Unit raise EncodeError
+
+type AggregateEntry
+
+pub(all) enum AlertType {
+  Info
+  ErrorAlert
+  WarningAlert
+  Success
+}
+
+pub(all) enum CheckStatus {
+  Ok
+  Warning
+  Critical
+  Unknown
+}
+
+pub(all) enum EventPriority {
+  Normal
+  Low
+}
+
 pub struct Message {
   // private fields
 }

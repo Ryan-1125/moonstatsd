@@ -134,6 +134,147 @@ fn Client::record_with(
 }
 
 ///|
+fn Client::admit(self : Client, message : @codec.Message) -> Admission raise {
+  if self.state != 0 {
+    raise Closed
+  }
+  if self.accepted - self.done >= self.capacity.to_int64() {
+    self.queue_full += 1
+    raise QueueFull
+  }
+  self.queue.push_back(message)
+  self.accepted += 1
+  if self.accepted - self.done == self.capacity.to_int64() {
+    self.wake.signal()
+  }
+  Enqueued
+}
+
+///|
+pub fn Client::event(
+  self : Client,
+  title : String,
+  text : String,
+  timestamp? : Int64,
+  hostname? : String,
+  aggregation_key? : String,
+  source_type? : String,
+  priority~ : @codec.EventPriority = Normal,
+  alert~ : @codec.AlertType = Info,
+  tags~ : Array[String] = [],
+) -> Admission raise {
+  if self.state != 0 {
+    raise Closed
+  }
+  if self.mode != DogStatsD {
+    raise InvalidConfig("events require DogStatsD")
+  }
+  self.admit(
+    @codec.encode_event(
+      title,
+      text,
+      timestamp?,
+      hostname?,
+      aggregation_key?,
+      source_type?,
+      priority~,
+      alert~,
+      tags=self.tags + tags,
+      max_bytes=self.max_bytes,
+    ),
+  )
+}
+
+///|
+pub fn Client::service_check(
+  self : Client,
+  name : String,
+  status : @codec.CheckStatus,
+  timestamp? : Int64,
+  hostname? : String,
+  message? : String,
+  tags~ : Array[String] = [],
+) -> Admission raise {
+  if self.state != 0 {
+    raise Closed
+  }
+  if self.mode != DogStatsD {
+    raise InvalidConfig("service checks require DogStatsD")
+  }
+  self.admit(
+    @codec.encode_check(
+      self.prefix + name,
+      status,
+      timestamp?,
+      hostname?,
+      message?,
+      tags=self.tags + tags,
+      max_bytes=self.max_bytes,
+    ),
+  )
+}
+
+///|
+/// All values share one sampling decision; the rate applies to every selected value.
+pub fn Client::record_values(
+  self : Client,
+  name : String,
+  values : Array[@codec.Metric],
+  tags~ : Array[String] = [],
+  rate~ : Double = 1.0,
+) -> Admission raise {
+  if self.state != 0 {
+    raise Closed
+  }
+  if self.mode != DogStatsD {
+    raise InvalidConfig("value packing requires DogStatsD")
+  }
+  let message = @codec.encode_values(
+    name,
+    values,
+    prefix=self.prefix,
+    tags=self.tags + tags,
+    rate~,
+    max_bytes=self.max_bytes,
+  )
+  if rate < 1 && !@codec.sampled(rate, (self.draw)()) {
+    self.sampled_out += 1
+    return SampledOut
+  }
+  self.admit(message)
+}
+
+///|
+/// Atomic window admission: failure leaves buffer and queue unchanged. Clear only
+/// after all messages have been admitted. Flush/close then use the normal barriers.
+pub fn Client::submit_aggregate(
+  self : Client,
+  buffer : @codec.AggregateBuffer,
+) -> Int32 raise {
+  if self.state != 0 {
+    raise Closed
+  }
+  if self.mode != DogStatsD {
+    raise InvalidConfig("aggregation requires DogStatsD")
+  }
+  let messages = buffer.messages(
+    prefix=self.prefix,
+    fixed_tags=self.tags,
+    max_bytes=self.max_bytes,
+  )
+  if messages.length().to_int64() >
+    self.capacity.to_int64() - (self.accepted - self.done) {
+    self.queue_full += 1
+    raise QueueFull
+  }
+  for message in messages {
+    ignore(self.admit(message))
+  }
+  buffer.clear()
+  messages.length()
+}
+
+///|
 /// Barrier for admissions preceding this call. Returns cumulative local outcomes.
 /// Timeout/caller cancellation stops this waiter, not the sending task.
 pub async fn Client::flush(
