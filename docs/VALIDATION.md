@@ -487,3 +487,9 @@ Actual ZIP audit passed: 58 entries, no private/build artifacts.
 ```
 
 新版 SDK 下参考客户端差分再次通过，并加入包含管道符和换行的事件正文。日志：expanded-current-sdk.log、expanded-current-preflight.log、expanded-current-reference.log；失败 job 完整日志：job-138428473008.log。新 SDK 与依赖均来自官方来源，未修改依赖源代码以规避错误。
+
+### 官方 Agent 转发表示定位
+
+运行 45391113987：Windows 全流程成功；Ubuntu native 33/33、纯核心 12/12、StatsD/exporter 通过，但 Agent 验收等候超时。下载实际 evidence-ubuntu-latest artifact 14919945224 检查 forwarded.json，确认事件、多值及全部聚合指标已正确到达，只有测试对 service check message 的假设不符。
+
+真实 Agent 7.60.0 输出（摘要）：事件 msg_text 是含实际换行的 deployed|ok + line2；check=moonagent.health、status=2、message 为保留 wire 转义的 failure\\nm\\:ready；packed.avg=15、agg.count 的 rate=0.3/interval=10、agg.gauge=4、agg.set=1、agg.hist.avg=3，标签均存在。修正检查消息的断言为实际转发表示，未放宽 status、内容或标签要求，没有替换接收器，也没有修改库以伪造输出。完整失败证据仍在 .local/evidence/failed-agent。

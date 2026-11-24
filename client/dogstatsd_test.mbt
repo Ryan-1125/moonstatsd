@@ -12,14 +12,17 @@ async test "events checks packed values and aggregate window on real UDP" {
         let window = @codec.AggregateBuffer::new()
         window.record("count", Counter(1.0))
         window.record("count", Counter(2.0))
-        assert_eq(c.submit_aggregate(window), 1)
+        assert_eq(
+          c.scope(prefix="jobs.", tags=["team:w"]).submit_aggregate(window),
+          1,
+        )
         assert_eq(window.length(), 0)
         assert_eq(c.flush().submitted, 4L)
         let buffer = FixedArray::make(512, b'\x00')
         let (n, _) = server.recvfrom(buffer)
         assert_eq(
           Bytes::from_array(buffer[:n].to_owned()),
-          b"_e{6,2}:deploy|ok|p:normal|t:info\n_sc|svc.health|0|m:ready\nsvc.latency:1:2|ms\nsvc.count:3|c",
+          b"_e{6,2}:deploy|ok|p:normal|t:info\n_sc|svc.health|0|m:ready\nsvc.latency:1:2|ms\nsvc.jobs.count:3|c|#team:w",
         )
       },
       mode=DogStatsD,

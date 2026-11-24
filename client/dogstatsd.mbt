@@ -1,4 +1,12 @@
 ///|
+pub fn Scope::submit_aggregate(
+  self : Scope,
+  buffer : @codec.AggregateBuffer,
+) -> Int32 raise {
+  self.owner.submit_aggregate_with(buffer, self.prefix, self.tags)
+}
+
+///|
 pub fn Scope::event(
   self : Scope,
   title : String,

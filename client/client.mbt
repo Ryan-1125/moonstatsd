@@ -254,6 +254,16 @@ pub fn Client::submit_aggregate(
   self : Client,
   buffer : @codec.AggregateBuffer,
 ) -> Int32 raise {
+  self.submit_aggregate_with(buffer, self.prefix, self.tags)
+}
+
+///|
+fn Client::submit_aggregate_with(
+  self : Client,
+  buffer : @codec.AggregateBuffer,
+  prefix : String,
+  tags : Array[String],
+) -> Int32 raise {
   if self.state != 0 {
     raise Closed
   }
@@ -261,8 +271,8 @@ pub fn Client::submit_aggregate(
     raise InvalidConfig("aggregation requires DogStatsD")
   }
   let messages = buffer.messages(
-    prefix=self.prefix,
-    fixed_tags=self.tags,
+    prefix~,
+    fixed_tags=tags,
     max_bytes=self.max_bytes,
   )
   if messages.length() > self.capacity {

@@ -53,6 +53,7 @@ pub fn Scope::record_values(Self, String, Array[@moonstatsd.Metric], tags? : Arr
 pub fn Scope::scope(Self, prefix? : String, tags? : Array[String]) -> Self raise
 pub fn Scope::service_check(Self, String, @moonstatsd.CheckStatus, timestamp? : Int64, hostname? : String, message? : String, tags? : Array[String]) -> Admission raise
 pub fn Scope::start_timer(Self, String, tags? : Array[String], rate? : Double, clock? : () -> UInt64) -> Stopwatch raise
+pub fn Scope::submit_aggregate(Self, @moonstatsd.AggregateBuffer) -> Int32 raise
 
 pub struct SendFailure {
   message : String

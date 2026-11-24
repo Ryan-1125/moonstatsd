@@ -102,7 +102,9 @@ try {
     const found=[sample('moonagent.count',counter),sample('moonagent.queue',s=>hasValue(s,7)),sample('moonagent.timer.avg',s=>hasValue(s,250)),sample('moonagent.payload.avg',s=>hasValue(s,42)),sample('moonagent.unique',s=>hasValue(s,2)),sample('moonagent.packed.avg',s=>hasValue(s,15)),sample('moonagent.agg.count',s=>countValue(s,3)),sample('moonagent.agg.gauge',s=>hasValue(s,4)),sample('moonagent.agg.set',s=>hasValue(s,1)),sample('moonagent.agg.hist.avg',s=>hasValue(s,3))];
     const all=forwarded.flatMap(p=>objects(p.body));
     const event=all.find(o=>(o.msg_title||o.title)==='MoonStatsD expanded'&&(o.msg_text||o.text)==='deployed|ok\nline2');
-    const check=all.find(o=>(o.check||o.check_name)==='moonagent.health'&&o.status===2&&o.message==='failure\nm:ready');
+    // Agent 7.60.0 forwards check messages with wire escapes retained, unlike
+    // event text. Assert its actual representation rather than invent decoding.
+    const check=all.find(o=>(o.check||o.check_name)==='moonagent.health'&&o.status===2&&o.message==='failure\\nm\\:ready');
     if(!event||!check)return false;
     for(const object of [event,check])for(const tag of ['env:test','service:demo','route:home'])assert.ok(object.tags?.includes(tag),'forwarded event/check tags');
     return found.every(Boolean)&&found;
