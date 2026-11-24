@@ -14,7 +14,7 @@
 moon add Ryan-1125/moonstatsd
 ```
 
-当前扩展版本为 **0.3.0**，使用 Apache-2.0 许可证。本版本使用已实测 SDK **moonc v0.10.22 / moon 0.1.20261119**。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.22.10`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
+当前发布版本为 **0.3.0**，使用 Apache-2.0 许可证。本版本使用已实测 SDK **moonc v0.10.22 / moon 0.1.20261119**。异步 UDP 客户端使用 **native** 目标，依赖 `moonbitlang/async@0.22.10`；纯协议核心可独立使用，并通过 native 和 wasm-gc 测试。
 
 [Mooncakes 包与文档](https://mooncakes.io/docs/Ryan-1125/moonstatsd) · [版本记录](CHANGELOG.md) · [验证结果](docs/STATUS.md)
 

@@ -499,3 +499,22 @@ Actual ZIP audit passed: 58 entries, no private/build artifacts.
 e3fb522 对应运行 https://github.com/Ryan-1125/moonstatsd/actions/runs/45391820670 的 Windows 与 Ubuntu 全流程均成功。Ubuntu 执行了固定摘要官方 Agent 7.60.0 的事件、服务检查、多值与聚合输出断言，未跳过或改成 mock。Scope 也支持原子窗口提交并继承前缀、标签，相关真实 UDP 回归仍通过。
 
 保留早期失败运行与实际 artifact，修复依据和区别均已记录。新增 .gitignore 中 docs/shenbao.md 的排除规则来自之前已授权的文档移动，本轮一并保留提交；申报书本身不进入 Git 或发布包。
+
+### 0.3.0 发布后验收
+
+准确发布快照：261dea8c5076f28846f61bf6af45db30e92c506c；release.json 记录 workingTreeClean=true。
+
+```text
+moon publish
+Server status: 200 OK
+./tools/test-registry-consumer.ps1
+Registry 0.3.0 consumer: metrics, scopes, timers, events, checks, multi-values, aggregation and real UDP passed
+./tools/test-readme.ps1 -SkipUpdate
+Using cached Ryan-1125/moonstatsd@0.3.0
+local submitted=3, send errors=0
+README examples passed: published dependency, exact source, compile and run (UDP output is local submission only).
+```
+
+归档 SHA256：e86f01628365f160167fa635589435e049d27a487e65036dc532eea95326568c；上传前后相同。隔离 SDK 使用现有账号的临时凭据副本发布，finally 已删除该副本，全局凭据与全局 SDK 未修改。公开包仍为精确 58 文件白名单，个人申报材料不在其中。
+
+本地 docs/shenbao.md 已同步 0.3.0 成果，保持 Git 忽略。标签 v0.3.0 指向实际上传快照；本段和状态更新属于后续证据记录，不声称改写已上传的归档。日志：v030-release.log、v030-publish.log、v030-registry.log、v030-readme.log。

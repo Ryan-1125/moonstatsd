@@ -2,7 +2,7 @@
 
 更新日期：2026-11-24。当前版本 0.3.0；历史命令、失败与修复细节保留在 VALIDATION.md。
 
-**交付状态：0.3.0 已完成新增协议、聚合、异步客户端及双平台真实互操作验收。**
+**交付状态：0.3.0 已完成协议、聚合、异步客户端、双平台真实互操作验收及 Mooncakes 发布。**
 项目包含可独立消费的协议库、native 异步 UDP 客户端、业务辅助 API、真实采集器互操作工具，以及可复现的版本验收流程。
 
 ## 已实现
@@ -27,7 +27,7 @@
 | statsd_exporter 0.28.0 | 实际 counter/gauge/timer/histogram/distribution 和标签验证 |
 | datadog-go 5.8.3 | 六类指标及 Events/Checks UTF-8、转义、元数据差分通过 |
 | 独立消费 | 实际 ZIP 解压副本、独立应用编译与真实 UDP 通过 |
-| Mooncakes 0.2.0 消费 | 从 registry 解析依赖，编码、打包、Scope、计时器与真实 DogStatsD UDP 收发通过 |
+| Mooncakes 0.3.0 消费 | 指标、Scope、计时器、Events、Checks、多值、聚合及真实 UDP 收发通过 |
 | Windows / Ubuntu CI | e3fb522 两个平台全流程成功；包含扩展官方 Agent 验收 |
 | 官方 DogStatsD Agent 7.60.0 | Ubuntu CI 真实通过：采样计数、gauge、timer、histogram、set 与标签 |
 
@@ -37,7 +37,7 @@ interval=10（折算计数 4），gauge=7、timer.avg=250、histogram.avg=42、s
 
 ## 发布
 
-- Mooncakes 0.2.0 已发布：[`Ryan-1125/moonstatsd`](https://mooncakes.io/docs/Ryan-1125/moonstatsd)。
+- Mooncakes 0.3.0 已发布：[`Ryan-1125/moonstatsd`](https://mooncakes.io/docs/Ryan-1125/moonstatsd)。
 - 安装：`moon add Ryan-1125/moonstatsd`。
 - 全新消费验证：`./tools/test-registry-consumer.ps1`，无本地源码或 workspace 覆盖。
 - 公开 GitHub 仓库提供源码、示例、CI、许可证和可复现验证工具。
@@ -71,3 +71,4 @@ sink。该 sink 不解析 StatsD 输入，不是替代接收器。无需真实 A
 - 官方 Agent 7.60.0 实际转发事件和 check；packed timer.avg=15、agg counter=3、gauge=4、set=1、histogram.avg=3，标签验证通过。
 - 本轮完整成功记录：[45391820670](https://github.com/Ryan-1125/moonstatsd/actions/runs/45391820670)。
 - API、显式窗口生命周期与统计口径见 [DOGSTATSD.md](DOGSTATSD.md)。
+0.3.0 上传返回 200 OK，线上独立消费与 README 示例通过。发布归档 SHA256：`e86f01628365f160167fa635589435e049d27a487e65036dc532eea95326568c`。
