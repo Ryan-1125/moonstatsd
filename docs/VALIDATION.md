@@ -448,3 +448,25 @@ README examples passed: published dependency, exact source, compile and run (UDP
 与上传前 release.json 相同。发布后 registry 测试下载真实 0.2.0，不使用源码覆盖；同时断言 Scope 计时器的 5ms wire、累计提交计数及接收字节。
 
 日志：.local/evidence/v020-publish.log、v020-registry.log、v020-readme.log、v020-preflight-release.log。版本标签 v0.2.0 指向上述实际发布快照，后续文档提交只补充验证证据，不声称改写已有 registry 归档。
+
+## 2026-11-24：Events / Service Checks / 多值 / 聚合扩展
+
+读取官方当前数据报文档：https://docs.datadoghq.com/extend/dogstatsd/datagram_shell.md 。原固定 documentation 提交的网页获取返回 cache miss，没有把该失败当作读取成功。另实际检查本机缓存的 datadog-go v5.8.3（MIT）format.go、event.go、service_check.go，执行真实 Go 客户端差分，包含 UTF-8 标题、换行、固定时间戳、主机、aggregation key、source、priority、alert 和服务检查 m-colon 转义。
+
+```text
+moon test --target native
+Total tests: 32, passed: 32, failed: 0.
+moon test --target wasm-gc --package Ryan-1125/moonstatsd
+Total tests: 11, passed: 11, failed: 0.
+node tools/test-reference.mjs
+ datadog-go v5.8.3: event UTF-8/newline/metadata and service check escaping exactly equal
+ datadog-go v5.8.3: 6 wire cases semantically equal (timer decimal formatting normalized)
+./tools/test-consumer.ps1 -SkipUpdate
+Independent published-ZIP consumer: codec, events, checks, multi-values, aggregation and real UDP passed
+./tools/prepare-release.ps1 -SkipUpdate
+Actual ZIP audit passed: 58 entries, no private/build artifacts.
+```
+
+测试覆盖事件长度和正文管道符、四种检查状态、注入和控制字符、字段顺序、多值混合类型/Set/超限拒绝、分布观测不求平均、窗口溢出保护、标签快照、精确字节拆包、窗口满队列原子保留和真实 UDP 收发。聚合为显式有界窗口，submit_aggregate 成功后才清空；不将未提交窗口冒充已发送数据。
+
+新增官方 Agent 测试在既有固定摘要 7.60.0 镜像中检查事件和检查转发 JSON、多值平均及 counter/gauge/set/histogram 聚合结果；本机无 Docker，只能在 Linux CI 实际执行，结果另行追加。保留原有未提交的 .gitignore 和 docs/STATUS.md 改动，没有将个人申报文件纳入提交或包。

@@ -11,7 +11,11 @@ const reference=run(go,['run','-mod=mod','.'],resolve('tools/reference-client'))
 const moon=run('moon',['run','cmd/wire','--target','native'],root);
 writeFileSync('.local/evidence/reference-wire.txt',reference);
 writeFileSync('.local/evidence/moon-wire.txt',moon);
-function normalize(wire){return wire.trim().split(/\r?\n/).filter(Boolean).map(line=>{const [head,type,...ext]=line.split('|');const colon=head.indexOf(':');assert.ok(ext.every(s=>s.startsWith('#')), 'unexpected wire extension');assert.ok(type==='s'||Number.isFinite(Number(head.slice(colon+1))), 'non-finite wire number');return {name:head.slice(0,colon),value:type==='s'?head.slice(colon+1):Number(head.slice(colon+1)),type,tags:ext.filter(s=>s.startsWith('#')).flatMap(s=>s.slice(1).split(',')).sort()}}).sort((a,b)=>a.name.localeCompare(b.name));}
+const extended=wire=>wire.trim().split(/\r?\n/).filter(s=>s.startsWith('_e{')||s.startsWith('_sc|')).sort();
+function normalize(wire){return wire.trim().split(/\r?\n/).filter(s=>s&&!s.startsWith('_e{')&&!s.startsWith('_sc|')).map(line=>{const [head,type,...ext]=line.split('|');const colon=head.indexOf(':');assert.ok(ext.every(s=>s.startsWith('#')), 'unexpected wire extension');assert.ok(type==='s'||Number.isFinite(Number(head.slice(colon+1))), 'non-finite wire number');return {name:head.slice(0,colon),value:type==='s'?head.slice(colon+1):Number(head.slice(colon+1)),type,tags:ext.filter(s=>s.startsWith('#')).flatMap(s=>s.slice(1).split(',')).sort()}}).sort((a,b)=>a.name.localeCompare(b.name));}
 assert.equal(normalize(reference).length,6);
 assert.deepEqual(normalize(moon),normalize(reference));
+assert.equal(extended(reference).length,2);
+assert.deepEqual(extended(moon),extended(reference));
+console.log('datadog-go v5.8.3: event UTF-8/newline/metadata and service check escaping exactly equal');
 console.log('datadog-go v5.8.3: 6 wire cases semantically equal (timer decimal formatting normalized)');

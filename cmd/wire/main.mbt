@@ -21,4 +21,30 @@ fn main raise {
     }
     println(@utf8.decode(message.bytes()))
   }
+  println(
+    @utf8.decode(
+      @codec.encode_event(
+        "发布",
+        "line1\nline2",
+        timestamp=1700000000L,
+        hostname="node",
+        aggregation_key="deploy",
+        source_type="ci",
+        alert=Success,
+        tags=["env:test", "route:home"],
+      ).bytes(),
+    ),
+  )
+  println(
+    @utf8.decode(
+      @codec.encode_check(
+        "svc.health",
+        Critical,
+        timestamp=1700000000L,
+        hostname="node",
+        message="line1\nm:ready",
+        tags=["env:test", "route:home"],
+      ).bytes(),
+    ),
+  )
 }

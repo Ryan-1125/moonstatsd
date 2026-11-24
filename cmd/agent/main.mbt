@@ -13,8 +13,38 @@ async fn main {
       ignore(c.record("unique", Set("alice")))
       ignore(c.record("unique", Set("alice")))
       ignore(c.record("unique", Set("bob")))
+      ignore(
+        c.event(
+          "MoonStatsD expanded",
+          "deployed\nline2",
+          aggregation_key="release",
+          alert=Success,
+          hostname="moonstatsd-node",
+        ),
+      )
+      ignore(
+        c.service_check(
+          "health",
+          Critical,
+          message="failure\nm:ready",
+          hostname="moonstatsd-node",
+        ),
+      )
+      ignore(c.record_values("packed", [Timer(10.0), Timer(20.0)]))
+      let window = @codec.AggregateBuffer::new()
+      window.record("agg.count", Counter(1.0))
+      window.record("agg.count", Counter(2.0))
+      window.record("agg.gauge", Gauge(1.0))
+      window.record("agg.gauge", Gauge(4.0))
+      window.record("agg.set", Set("alice"))
+      window.record("agg.set", Set("alice"))
+      window.record("agg.hist", Histogram(2.0))
+      window.record("agg.hist", Histogram(4.0))
+      assert_eq(c.submit_aggregate(window), 4)
       let report = c.close()
-      if report.submitted != 7 || report.send_errors != 0 || report.dropped != 0 {
+      if report.submitted != 14 ||
+        report.send_errors != 0 ||
+        report.dropped != 0 {
         fail("Agent workload did not submit all metrics locally")
       }
       println(

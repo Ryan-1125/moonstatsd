@@ -62,3 +62,9 @@
 !/tools/test-reference.mjs
 !/tools/test-registry-consumer.ps1
 !/docs/RELEASING.md
+!/aggregate.mbt
+!/dogstatsd.mbt
+!/dogstatsd_test.mbt
+!/client/dogstatsd.mbt
+!/client/dogstatsd_test.mbt
+!/docs/DOGSTATSD.md

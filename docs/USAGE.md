@@ -75,7 +75,7 @@ prefix 原样拼接，请自行包含末尾的 `.`。DogStatsD 的完整名称�
 
 close 的时限限制排空等待；取消之后的运行时资源清理可能延后完成。超时调用返回后可读取 stats，作用域退出保证清理完成。进程强制终止时无法保证排空。
 
-Stats 中 enqueued/submitted/dropped/pending 是指标数；sampled_out 是抽样排除数，queue_full 是满队列拒绝数，send_errors 是失败数据报次数；last_send_error 保留最近一次本机发送错误文本，成功发送不会清除它。InvalidConfig(reason) 提供具体配置原因，目的 UDP 端口 0 会在建 socket 前拒绝。`submitted` 只表示 SDK 的本机 socket 发送调用返回成功。UDP 可能丢失、重复、乱序；取消期间的数据报也可能已经发出，不能把本地 dropped 当作“采集器绝未收到”。
+Stats 中 enqueued/submitted/dropped/pending 是编码消息数（事件、服务检查和多值消息各计一条，聚合按输出消息计数）；sampled_out 是抽样排除数，queue_full 是满队列拒绝数，send_errors 是失败数据报次数；last_send_error 保留最近一次本机发送错误文本，成功发送不会清除它。InvalidConfig(reason) 提供具体配置原因，目的 UDP 端口 0 会在建 socket 前拒绝。`submitted` 只表示 SDK 的本机 socket 发送调用返回成功。UDP 可能丢失、重复、乱序；取消期间的数据报也可能已经发出，不能把本地 dropped 当作“采集器绝未收到”。
 
 ## 验证命令
 

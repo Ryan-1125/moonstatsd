@@ -114,6 +114,15 @@ fn main raise {
 
 运行完整的自包含示例：`moon run cmd/diagnostics --target native`。示例结合子客户端、计时器、队列满处理、错误通知及真实本机 UDP 接收，源码见 [cmd/diagnostics](cmd/diagnostics/main.mbt)。
 
+## Events、Service Checks、多值与聚合
+
+- `encode_event` / `Client.event`：支持 UTF-8 长度、事件元数据与标签。
+- `encode_check` / `Client.service_check`：四种状态、时间戳、主机和消息转义。
+- `encode_values` / `Client.record_values`：DogStatsD v1.1 数值多值打包。
+- `AggregateBuffer` / `Client.submit_aggregate`：有界窗口、按类型聚合、观测保留、原子提交与背压保留。
+
+完整语义和使用边界见 [DogStatsD 协议与聚合](docs/DOGSTATSD.md)。
+
 ## 有界缓冲与生命周期
 
 默认容量 **256 条**、刷新间隔 **100 ms**、发送及 flush/close 时限 **1000 ms**。单一发送任务管理 UDP 套接字，容量包括发送中的记录。配置限制容量最多 65536 条，容量乘数据报上限不超过 16 MiB 的 wire 缓冲预算。
@@ -131,14 +140,14 @@ fn main raise {
 
 `stats()` 提供入队、采样排除、队列满、提交、发送错误、丢弃、待处理及关闭状态；`last_send_error` 保留最近一次本机发送错误。
 
-客户端适用于同一 async 事件循环内的协作任务。UDP 可能丢失、重复和乱序，本库采用无重试发送；`submitted` 与 `flush` 是本机处理结果，不是采集器 ACK。当前 API 聚焦指标数据报编码与 UDP 上报，events、service checks 及其他传输方式不属于本版本范围。
+客户端适用于同一 async 事件循环内的协作任务。UDP 可能丢失、重复和乱序，本库采用无重试发送；`submitted` 与 `flush` 是本机处理结果，不是采集器 ACK。客户端同时支持 Events、Service Checks、多值打包和有界聚合，详见 [DogStatsD 协议与聚合 API](docs/DOGSTATSD.md)。
 
 ## 真实互操作与质量验证
 
 | 验证对象 | 覆盖内容 |
 | --- | --- |
-| native：25 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
-| 纯核心 wasm-gc：6 项通过 | 编码、校验、采样和打包 |
+| native：32 项通过 | 协议、真实 UDP、有界队列、定时刷新、错误、取消、flush/close 竞争 |
+| 纯核心 wasm-gc：11 项通过 | 编码、校验、采样和打包 |
 | StatsD 0.9.0 | counter 采样放大、gauge 相对变化、timer、set 去重 |
 | statsd_exporter 0.28.0 | counter、gauge、timer、histogram、distribution 与标签 |
 | 官方 DogStatsD Agent 7.60.0 | counter、非负 gauge、timer、histogram、set 与标签的真实聚合输出 |

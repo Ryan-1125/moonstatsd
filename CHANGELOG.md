@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-24
+
+- Add typed DogStatsD Events and Service Checks, UTF-8 length framing, metadata and escaping.
+- Add Client and Scope async queue admission for events, checks and numeric v1.1 value packing.
+- Add bounded explicit aggregation windows: counter sums, last gauges, set deduplication and lossless observation packing.
+- Preserve windows on encoding or queue backpressure; commit whole windows atomically.
+- Extend fixed datadog-go differential tests and official Agent forwarding assertions to the new protocols.
+
 ## 0.2.0 — 2026-10-22
 
 - Add nested scoped clients sharing the owner's bounded queue, sender and lifetime, with snapshot tags and validated prefixes.

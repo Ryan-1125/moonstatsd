@@ -1,7 +1,10 @@
 AGENTS.md
+aggregate.mbt
 CHANGELOG.md
 client/client_test.mbt
 client/client.mbt
+client/dogstatsd_test.mbt
+client/dogstatsd.mbt
 client/helpers_test.mbt
 client/helpers.mbt
 client/lifecycle_wbtest.mbt
@@ -22,11 +25,14 @@ cmd/statsd/pkg.generated.mbti
 cmd/wire/main.mbt
 cmd/wire/moon.pkg
 cmd/wire/pkg.generated.mbti
+docs/DOGSTATSD.md
 docs/RELEASING.md
 docs/SOURCES.md
 docs/STATUS.md
 docs/USAGE.md
 docs/VALIDATION.md
+dogstatsd_test.mbt
+dogstatsd.mbt
 LICENSE
 moon.mod
 moon.pkg

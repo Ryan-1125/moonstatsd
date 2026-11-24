@@ -26,6 +26,7 @@ async function until(f, attempts=180){
   throw Error('Real DogStatsD output did not satisfy assertions before deadline');
 }
 const series=[];
+const forwarded=[];
 const requests=[];
 const intakeErrors=[];
 const intake=http.createServer(async(req,res)=>{
@@ -35,12 +36,16 @@ const intake=http.createServer(async(req,res)=>{
     const raw=Buffer.concat(parts);
     const path=new URL(req.url,'http://localhost').pathname;
     requests.push({path,encoding:req.headers['content-encoding']||'',bytes:raw.length});
-    if(path==='/api/v1/series'){
+    if(['/api/v1/series','/intake/','/api/v1/check_run','/api/v2/events','/api/v2/service_checks'].includes(path)){
       const encoding=req.headers['content-encoding'];
       const decoded=encoding==='deflate'?inflateSync(raw,{maxOutputLength:8*1024*1024}):encoding==='gzip'?gunzipSync(raw,{maxOutputLength:8*1024*1024}):raw;
       const body=JSON.parse(decoded.toString('utf8'));
-      assert.ok(Array.isArray(body.series),'Agent must emit actual v1 JSON series');
-      series.push(...body.series);
+      if(path==='/api/v1/series') {
+        assert.ok(Array.isArray(body.series),'Agent must emit actual v1 JSON series');
+        series.push(...body.series);
+      }
+      assert.ok(forwarded.length<1000,'bounded forwarded payload storage');
+      forwarded.push({path,body});
     }
     res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({valid:true}));
   } catch(e){intakeErrors.push(String(e));res.writeHead(400);res.end('invalid test intake payload');}
@@ -87,19 +92,31 @@ try {
   const sample=(name,predicate)=>series.find(s=>s.metric===name && predicate(s));
   const hasValue=(s,v)=>s.points?.some(p=>Math.abs(p[1]-v)<1e-9);
   const counter=s=>s.type==='rate' && s.interval>0 && s.points?.some(p=>Math.abs(p[1]*s.interval-4)<1e-9);
+  const countValue=(s,v)=>s.type==='rate'&&s.interval>0&&s.points?.some(p=>Math.abs(p[1]*s.interval-v)<1e-9);
+  function objects(value){
+    if(!value||typeof value!=='object')return [];
+    return [value,...Object.values(value).flatMap(objects)];
+  }
   const selected=await until(()=>{
     assert.deepEqual(intakeErrors,[]);
-    const found=[sample('moonagent.count',counter),sample('moonagent.queue',s=>hasValue(s,7)),sample('moonagent.timer.avg',s=>hasValue(s,250)),sample('moonagent.payload.avg',s=>hasValue(s,42)),sample('moonagent.unique',s=>hasValue(s,2))];
+    const found=[sample('moonagent.count',counter),sample('moonagent.queue',s=>hasValue(s,7)),sample('moonagent.timer.avg',s=>hasValue(s,250)),sample('moonagent.payload.avg',s=>hasValue(s,42)),sample('moonagent.unique',s=>hasValue(s,2)),sample('moonagent.packed.avg',s=>hasValue(s,15)),sample('moonagent.agg.count',s=>countValue(s,3)),sample('moonagent.agg.gauge',s=>hasValue(s,4)),sample('moonagent.agg.set',s=>hasValue(s,1)),sample('moonagent.agg.hist.avg',s=>hasValue(s,3))];
+    const all=forwarded.flatMap(p=>objects(p.body));
+    const event=all.find(o=>(o.msg_title||o.title)==='MoonStatsD expanded'&&(o.msg_text||o.text)==='deployed\nline2');
+    const check=all.find(o=>(o.check||o.check_name)==='moonagent.health'&&o.status===2&&o.message==='failure\nm:ready');
+    if(!event||!check)return false;
+    for(const object of [event,check])for(const tag of ['env:test','service:demo','route:home'])assert.ok(object.tags?.includes(tag),'forwarded event/check tags');
     return found.every(Boolean)&&found;
   });
   for(const item of selected){for(const tag of ['env:test','service:demo','route:home'])assert.ok(item.tags.includes(tag),`${item.metric} missing ${tag}`);}
   writeFileSync(resolve(dir,'asserted-series.json'),JSON.stringify(selected,null,2));
   console.log('Official DogStatsD Agent 7.60.0: sampled count=4, gauge=7, timer.avg=250ms, histogram.avg=42, set=2; tags verified');
+  console.log('Official Agent: event text/check status+message+tags, multi-value timer avg=15, aggregated count=3/gauge=4/set=1/histogram avg=3 verified');
 } finally {
   if(started){writeFileSync(resolve(dir,'agent.log'),docker(['logs',container],false));docker(['rm','-f',container],false);}
   if(networkCreated)docker(['network','rm',network],false);
   writeFileSync(resolve(dir,'requests.json'),JSON.stringify(requests,null,2));
   writeFileSync(resolve(dir,'series.json'),JSON.stringify(series,null,2));
+  writeFileSync(resolve(dir,'forwarded.json'),JSON.stringify(forwarded,null,2));
   writeFileSync(resolve(dir,'intake-errors.json'),JSON.stringify(intakeErrors,null,2));
   writeFileSync(resolve(dir,'commands.log'),commandLog);
   await new Promise(ok=>intake.close(ok));
