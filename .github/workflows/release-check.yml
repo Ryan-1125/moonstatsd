@@ -20,6 +20,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.22.1'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
       - name: Install MoonBit
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
@@ -28,17 +31,12 @@ jobs:
         shell: pwsh
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
+          VERIFY_PUBLISHED: ${{ inputs.published }}
         run: |
           . ./tools/module-metadata.ps1
           $module = Get-ModuleMetadata -ProjectRoot $PWD
           if ($module.Version -ne $env:REQUESTED_VERSION) { throw 'Requested version differs from checkout' }
-          ./tools/prepare-release.ps1
-      - name: Verify published installation and examples
-        if: inputs.published
-        shell: pwsh
-        run: |
-          ./tools/test-registry-consumer.ps1
-          ./tools/test-readme.ps1
+          ./tools/verify-acceptance.ps1 -Agent -Published:($env:VERIFY_PUBLISHED -eq 'true')
       - uses: actions/upload-artifact@v4
         if: always()
         with:

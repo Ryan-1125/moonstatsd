@@ -9,6 +9,17 @@ try {
     & moon update
     if ($LASTEXITCODE) { throw 'dependency update failed' }
   }
+  $interfaces = @(& git ls-files -- '*.mbti')
+  if ($LASTEXITCODE) { throw 'Cannot enumerate versioned API interfaces' }
+  $interfaceHashes = @{}
+  foreach ($file in $interfaces) { $interfaceHashes[$file] = (Get-FileHash -LiteralPath $file).Hash }
+  & moon info --target native
+  if ($LASTEXITCODE) { throw 'API generation failed' }
+  foreach ($file in $interfaces) {
+    if ((Get-FileHash -LiteralPath $file).Hash -ne $interfaceHashes[$file]) {
+      throw "Generated API changed: $file. Review and commit the interface before release."
+    }
+  }
   foreach ($arguments in @(
     @('fmt', '--check'),
     @('check', '--target', 'native', '--deny-warn'),

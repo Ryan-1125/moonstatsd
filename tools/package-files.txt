@@ -25,6 +25,7 @@ cmd/statsd/pkg.generated.mbti
 cmd/wire/main.mbt
 cmd/wire/moon.pkg
 cmd/wire/pkg.generated.mbti
+docs/ACCEPTANCE.md
 docs/DOGSTATSD.md
 docs/RELEASING.md
 docs/SOURCES.md
@@ -56,3 +57,4 @@ tools/test-interop.mjs
 tools/test-readme.ps1
 tools/test-reference.mjs
 tools/test-registry-consumer.ps1
+tools/verify-acceptance.ps1

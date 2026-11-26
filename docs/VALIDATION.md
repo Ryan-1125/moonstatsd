@@ -518,3 +518,22 @@ README examples passed: published dependency, exact source, compile and run (UDP
 归档 SHA256：e86f01628365f160167fa635589435e049d27a487e65036dc532eea95326568c；上传前后相同。隔离 SDK 使用现有账号的临时凭据副本发布，finally 已删除该副本，全局凭据与全局 SDK 未修改。公开包仍为精确 58 文件白名单，个人申报材料不在其中。
 
 本地 docs/shenbao.md 已同步 0.3.0 成果，保持 Git 忽略。标签 v0.3.0 指向实际上传快照；本段和状态更新属于后续证据记录，不声称改写已上传的归档。日志：v030-release.log、v030-publish.log、v030-registry.log、v030-readme.log。
+
+## 2026-11-26：最终验收入口与 API 漂移保护
+
+新增 tools/verify-acceptance.ps1，逐步骤生成独立日志和 summary.json，失败停止并保存失败项。Release acceptance 工作流接入同一入口，并配置 Go；Linux 版本运行官方 Agent，published 选项控制线上消费验证。prepare-release 增加生成 API 的前后哈希检查，接口漂移需先审核提交。
+
+实际运行（使用项目隔离 SDK，GO_EXE 指向已有 Go）：
+
+```text
+./tools/verify-acceptance.ps1 -SkipUpdate -Published
+source-package-consumer passed
+real-collectors passed
+reference-client passed
+published-consumer passed
+readme-examples passed
+```
+
+本地本轮没有传 -Agent，summary.json 的 requested.agent=false。官方 Agent 的既有完整成功证据链接保留在 ACCEPTANCE.md；新的手动工作流会在 Linux Docker 中执行同一 Agent 测试。源测试仍为 native 33/33、纯核心 wasm-gc 12/12，新增验收文件进入精确白名单，实际 ZIP 审计 60 条目通过。本轮更新验收工具和文档，线上 0.3.0 仍通过实际消费和原样 README 示例验证。
+
+本次日志目录：.local/evidence/acceptance-20261126-084442-fb560cf060b34877a7a517e917e04b77。个人申报文件保持本地忽略。

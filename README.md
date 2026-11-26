@@ -184,6 +184,8 @@ node tools/test-agent.mjs
 
 ## 文档与许可证
 
+最终验收可从 [验收导航](docs/ACCEPTANCE.md) 开始；`./tools/verify-acceptance.ps1 -Published` 串联源码、包审计、真实采集器、参考客户端和线上消费检查，输出分步骤日志与摘要。
+
 - [使用细节与生命周期约定](docs/USAGE.md)
 - [发布与验证概览](docs/STATUS.md)
 - [版本发布与包安全验收](docs/RELEASING.md)
